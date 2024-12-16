@@ -123,3 +123,120 @@ services:
       - '5672:5672'
       # Management UI port
       - '15672:15672'
+  # For Elasticsearch version ^8.11.0 and above, we need to enable security
+  # on Elasticsearch and create a Kibana token for Kibana to properly connect
+  # to Elasticsearch.
+  # Otherwise it might not work proprety and we might experience the issue
+  # where Kibana does not connect and on the browser we see the message
+  # 'Kibana server is not ready yet' after waiting a long time.
+  # For Elasticsearch, we're only creating a single node cluster for development
+  # If using Docker Desktop -> Increase the CPU Limit to maximum and Memory
+  # Limit to atleast 4 GB or better 12 GB
+  # Also make sure the Elasticsearch version is at least 8. Don't use v7.x.x
+  # Lot of things has changed. On v7, we could have been able to set up
+  # Elasticsearch without midning security. Only when we want to go on production,
+  # we had to setup security but that has changed on v8. On v8, even on
+  # local development the way to setup is, security is enabled by default. So
+  # if we run it without having HTTPs, without security, without a valid SSL
+  # certificate, we'll get errors. So what we're going to do is, we'll disable
+  # security for our local devleopment.
+  # But once in the cloud, use the cloud version which is secured.
+  # So, a single node cluster, at least version 8, and disable security for
+  # local development!
+  elasticsearch:
+    container_name: elasticsearch_container
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
+    # image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    restart: always
+    # Elasticsearch in itself uses Java JVM. And there are some environment
+    # variables that we need to set up. We don't need security enabled. So we
+    # have to disable security in the configuration because security requires
+    # us to have a valid SSL certificate that the Elasticsearch endpoint needs
+    # to be called using HTTPS. But we don't care about all that for our local
+    # development. So we've to disable security.
+    environment:
+      # Since Elasticsearch uses Java JVM, so we need to make sure that
+      # we've Java installed on our machine!
+      # We need to set `ES_JAVA_OPTS` which is just used to configure the
+      # Java Virtual Machine (JVM) options for Elasticsearch when it is
+      # running inside a Docker container.
+      # `-Xmx1g` sets the max heap size that the JVM can use. Here, it means,
+      # JVM can use upto 1GB of memory.
+      # Heap is the memory space used by Elasticsearch to store data and
+      # objects that the JVM needs while running.
+      # `Xms1g` sets initial heap size to 1 GB i.e how much memory JVM will
+      # allocate when Elasticsearch first starts. Hence, it will reserve 1 GB
+      # of memory right away, rather than starting with a smaller amount and
+      # growing as needed.
+      ES_JAVA_OPTS: -Xmx1g -Xms1g
+      # Tell Elasticsearch to lock the JVM heap in memory into RAM. This
+      # prevents the operating system from swapping the memory disk, which
+      # can be a performance bottleneck because when Elasticsearch is under
+      # heavy load, it can handle more data on the memory rather than relying
+      # on the disk, improving the performances of searches and data indexing.
+      bootstrap.memory_lock: 'true'
+      # Configure how Elasticsearch discovers and connects to other nodes in
+      # a cluster.
+      # Use single node cluster for local development / testing!
+      # Elasticsearch is designed to run in a cluster, where multiple nodes
+      # (Elasticsearch instances) work together to distribute data and handle
+      # queries. By default, Elasticsearch tries to discover other nodes in
+      # the network to form a cluster.
+      # And when we set it to single-node, we're telling Elasticsearch to
+      # run as a single-node cluster, meaning it will not try to discover or
+      # communicate with any other nodes. It operates as a standalone instance
+      discovery.type: single-node
+      # Disable security features
+      # Security was disabled by default in version 7. But now, in version 8,
+      # we have to manually disable it else it will request it for a valid
+      # SSL certificate. We don't need to do all of that in development.
+      # Hence, disabling so that it doesn't request for valid SSL certificates.
+      # i.e Disable security features in Elasticsearch specifically the
+      # authentication and authorization mechanism that are part of X-Pack
+      # security.
+      # X-Pack is a set of commercial features for Elasticsearch that enhance
+      # its capabilities arouond security, monitoring, alerting and more.
+      xpack.security.enabled: 'false'
+      # Enable the collection of monitoring data, which Elasticsearch can
+      # send to a monitoring cluster. This allows us to track metrics like
+      # resource usage, performance, indexing rates, etc.
+      xpack.monitoring.collection.enabled: 'true'
+      # Control whether the Elasticsearch node can enroll in a security-enabled
+      # cluster i.e this setting is used when we're working with a security
+      # enabled clusters and need to allow nodes to authenticate and securely
+      # join the cluster.
+      # If in a local or development environment, if security is disabled i.e
+      # `xpack.security.enabled: 'fase'`, then this may not be necessary.
+      xpack.security.enrollment.enabled: 'true'
+      # Enable token based authentication for Elasticsearch which is part of
+      # X-Pack Security authentication system. This is typically used in
+      # production or secure environments where we want to use token-based
+      # authentication for better security and scability. Hence, JWT or other
+      # authentication token can be used for authenticating requests to
+      # Elasticsearch, rather than requiring traditional username/password
+      # authentication.
+      xpack.security.authc.token.enabled: 'true'
+    # Elastic search runs on port 9200
+    ports:
+      # This is the port it uses to access the Elasticsearch REST API. But if
+      # we're using multi-node cluster, the port that Elasticsearch uses to
+      # communicate between those clusters is 9300:9300. But for us during
+      # development, its a single-node cluster which is sufficient.
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      # Elasticsearch stores data at `/usr/share/elasticsearch/data`
+      # But we want to map that to our local elasticsearch-data
+      - ./docker-volumes/elasticsearch-data:/usr/share/elasticsearch/data
+    # Connect Elasticsearch container to the elastic network. Doing this makes
+    # sure that, Elasticsearch container can communicate with other containers
+    # that are also connected to this elsatic network.
+    networks:
+      - elastic
+
+# Tell Docker Compose to create a network called elastic so that any
+# service (container) that needs to communicate with other services
+# in the same network will be connected to this elastic network.
+networks:
+  elastic:
+    name: elastic
