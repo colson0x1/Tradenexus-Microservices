@@ -63,3 +63,35 @@ services:
       # to add it to this path `./docker-volumes/data`
       # `/data` could be anything but I chose to use standard naming convention
       - ./docker-volumes/data:/data/db
+  mysql:
+    container_name: mysql_container
+    # If tag is not used, it'll use :latest image tag by default
+    image: mysql
+    # Local development
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    # If we want to access MySQL from our application, then we use all of this
+    # credentials
+    environment:
+      - MYSQL_USER=colson
+      - MYSQL_DATABASE=tradenexus_auth
+      # Use strong password for production
+      - MYSQL_ROOT_PASSWORD=stillhome
+      - MYSQL_PASSWORD=stillhome
+    ports:
+      - '3306:3306'
+    volumes:
+      - ./docker-volumes/mysql:/var/lib/mysql
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    # For postgres, we don't need any command
+    restart: always
+    environment:
+      - POSTGRES_USER=colson
+      - POSTGRES_PASSWORD=stillhome
+      - POSTGRES_DATABASE=tradenexus_reviews
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./docker-volumes/postgres:var/lib/postgres
