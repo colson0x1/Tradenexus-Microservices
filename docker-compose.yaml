@@ -1,0 +1,35 @@
+version: '3.9'
+services:
+  redis:
+    # Container name is used to access locally
+    container_name: redis_container
+    image: redis:alpine
+    # If there's an issue, we're restarting the container i.e if it fails, we
+    # are going to restart
+    restart: always
+    ports:
+      # Redis port is: 6379 inside the container and we're mapping it to 6379
+      # outside the container i.e second is the port we're going to use to
+      # access the service outside the container
+      - '6379'
+    command: redis-server --loglevel warning
+    # Since we're running this locally, we need a way for a docker to store
+    # the data because Redis is like a database. So the data needs to be stored
+    # somewhere. And we can do that by creating volumes i.e Volumes are like
+    # storage where Docker stores data. Since Redis is a DB and we are running
+    # locally, data can be stored using volumes. Here we're creating local
+    # volume, so the volume will be stored in the same directory. So volume
+    # will contain all the information that we're sending to Redis.
+    volumes:
+      # volumes takes path so inside this dir, there's going to be a folder
+      # called Docker volumes and then inside, there's going to be cached data
+      # and we're going to map it to /data
+      # This docker volume will be created when we run this service. We don't
+      # need to create it. And then also its going to create this cache dir.
+      # Now what this means is:
+      # This is local -> `./docker-volumes/cache`
+      # And this is what we're getting from Redis -> `:data`
+      # So the path /data from Redis, we want to map it to Docker volumes /cache
+      # on our local machine. So where the data is supposed to be stored on
+      # Redis, we are mapping it to this local path on our local machine.
+      - ./docker-volumes/cache:/data
