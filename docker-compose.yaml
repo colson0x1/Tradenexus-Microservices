@@ -95,3 +95,31 @@ services:
       - '5432:5432'
     volumes:
       - ./docker-volumes/postgres:var/lib/postgres
+  # For RabbitMQ, we're going to use the management-alpine version so we can
+  # have access to management dashboard i.e we can see the UI for RabbitMQ.
+  # For RabbitMQ itself, I'm not going to be storing any data. So I'm not
+  # creating any volumes. It's possible with RabbitMQ if we really wanna make
+  # our queue very durable. So that, in case there is a crash or there's a
+  # restart, we can always get our data.
+  # Here I won't be storing data. It will pass the data or the events that
+  # I'm sending, will just pass through the queue.
+  # Also, we need a default user and default password so that we can use it to
+  # connect to RabbitMQ from our application and also use it to access the
+  # management dashboard.
+  rabbitmq:
+    container_name: rabbitmq_container
+    # image: rabbitmq:3.13-rc-management-alpine
+    image: rabbitmq:4.1-rc-management-alpine
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=colson
+      - RABBITMQ_DEFAULT_PASSWORD=stillhome
+    # I'm going to set two different ports: AMQP protocol port and management
+    # port. The protocol port will be the port we use to access from our
+    # application and then the management port will be the port we use to
+    # access our dashboard.
+    ports:
+      # AMQP protocol port
+      - '5672:5672'
+      # Management UI port
+      - '15672:15672'
