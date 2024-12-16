@@ -33,3 +33,33 @@ services:
       # on our local machine. So where the data is supposed to be stored on
       # Redis, we are mapping it to this local path on our local machine.
       - ./docker-volumes/cache:/data
+  # Service name can be whatever we want
+  mongodb:
+    container_name: mongodb_container
+    # Version latest is fine for local development
+    image: mongo:latest
+    restart: always
+    # INITDB ROOT USERNAME and PASSWORD is optional for local development
+    # We can run MongoDB without that because not required while developing
+    # locally. But if we want to take it to the cloud, like maybe we want to
+    # use managed service i.e we want to manage the service ourself on
+    # Kubernetes, then we definitely have to configure our DB. Local development
+    # works fine without environment variables.
+    ports:
+      # MongoDB port number is 27017. So port number within the container and
+      # port number we're mapping outside the container.
+      - 27017:27017
+    # We need to map the volume where we want the data to be stored on our
+    # local machine.
+    # From documentation for mongo docker image, MongoDB volumes are usually
+    # mapped to `/data/db`
+    # So we're going to map out own local volume to the mongodb data path
+    volumes:
+      # We're using the same path i.e `./docker-volumes` so we just want one
+      # folder
+      # This is what will be created on our local machine -> `./docker-volumes/data`
+      # And this is what we're mapping that data to -> `/data/db`
+      # That's 1 to 1 mapping. i.e whatever is contained in `/data/db`, we want
+      # to add it to this path `./docker-volumes/data`
+      # `/data` could be anything but I chose to use standard naming convention
+      - ./docker-volumes/data:/data/db
