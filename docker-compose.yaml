@@ -233,8 +233,47 @@ services:
     # that are also connected to this elsatic network.
     networks:
       - elastic
+  kibana:
+    container_name: kibana_container
+    # image: docker.elastic.co/kibana/kibana:7.17.26
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    restart: always
+    environment:
+      # We need to set the host. And if we're using the multi node clusters,
+      # then we add all the service endpoints to this list. But since we're
+      # using only one node, it's going to be just one item in the list which
+      # is `http://elasticsearch_container:9200`
+      # In order for us to access one of these services, we use the container
+      # name. And because they are in the same network, Docker knows how to
+      # handle it. If they're running in different networks then that is a
+      # different case. But they're running in the same network, so Docker
+      # knows how to handle it. Thus, the service can be accessed with
+      # unique url.
+      # So with this url, Kibana will get access to the Elasticsearch service.
+      - ELASTICSEARCH_HOST=['http://elasticsearch_container:9200']
+    # Port for Kibana is 5601
+    ports:
+      - 5601:5601
+    networks:
+      - elastic
+    volumes:
+      # There are several methods for configuring Kibana on Docker. But
+      # conventional approach is, we provide a `kibana.yml` file
+      # Provide kibana.yml file to replace the `kibana.yml` located in the
+      # `/usr/share/kibana/config/kibana.yml`
+      # So kibana.yml file we're providing will replace the kibana inside the
+      # config folder. If we dont specifiy kibana.yml file, its going to use
+      # the default kibana.yml file located in the config but if we provide
+      # one, it will replace/overrides.
+      # The reason we're doing this is so that we can specify our Elasticsearch
+      # service path i.e `[http://elasticsearch_container:9200]`
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    # We don't want Kibana to start until Elasticsearch is running because
+    # Kibana depends on Elasticsearch.
+    depends_on:
+      - elasticsearch
 
-# Tell Docker Compose to create a network called elastic so that any
+#Tell Docker Compose to create a network called elastic so that any
 # service (container) that needs to communicate with other services
 # in the same network will be connected to this elastic network.
 networks:
