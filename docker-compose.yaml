@@ -254,6 +254,22 @@ services:
     # Port for Kibana is 5601
     ports:
       - 5601:5601
+    deploy:
+      resources:
+        # Specify maximum resource a container can use
+        # If the container tries to exceed these limits, Docker will throttle
+        # CPU usage and may kill the container if it breaches the memory cap.
+        # i.e Limits prevents a container from consuming too much CPU or memory,
+        # protecting other containers and the host machine.
+        limits:
+          memory: 4g # Cannot use more than 4GB RAM i.e memory
+          cpus: '2.0' # Limited to 2 CPU cores
+        # Reservations are minimum guaranteed resources for the container
+        # i.e Reservations guarantee that the container has enough rsources
+        # to run reliably.
+        reservations:
+          memory: 2g # Guaranteed at least 2GB RAM/memory
+          cpus: '1.5' # Guaranteed 1.5 CPU cores
     networks:
       - elastic
     volumes:
