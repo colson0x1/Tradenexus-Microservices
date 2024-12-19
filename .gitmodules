@@ -1,3 +1,6 @@
 [submodule "9-tradenexus-shared"]
-	path = 9-tradenexus-shared
+	path = server/9-tradenexus-shared
+	url = git@github.com:colson0x1/tradenexus-shared.git
+[submodule "server/9-tradenexus-shared"]
+	path = server/9-tradenexus-shared
 	url = git@github.com:colson0x1/tradenexus-shared.git
