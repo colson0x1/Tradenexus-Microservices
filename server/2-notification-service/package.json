@@ -1,0 +1,27 @@
+{
+  "name": "2-notification-service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/colson0x1/TradeNexus-microservices.git"
+  },
+  "author": "COLSON",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/colson0x1/TradeNexus-microservices/issues"
+  },
+  "homepage": "https://github.com/colson0x1/TradeNexus-microservices#readme",
+  "description": "",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.4.2"
+  }
+}
