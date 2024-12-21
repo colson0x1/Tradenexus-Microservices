@@ -113,7 +113,7 @@ services:
     restart: always
     environment:
       - RABBITMQ_DEFAULT_USER=colson
-      - RABBITMQ_DEFAULT_PASSWORD=stillhome
+      - RABBITMQ_DEFAULT_PASS=stillhome
     # I'm going to set two different ports: AMQP protocol port and management
     # port. The protocol port will be the port we use to access from our
     # application and then the management port will be the port we use to
