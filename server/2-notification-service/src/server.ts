@@ -5,12 +5,14 @@ import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@notifications/config';
 import { Application } from 'express';
+import { healthRoutes } from '@notifications/routes';
 
 const SERVER_PORT = 4001;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationServer', 'debug');
 
 export function start(app: Application): void {
   startServer(app);
+  app.use('', healthRoutes());
   startQueues();
   startElasticSearch();
 }
