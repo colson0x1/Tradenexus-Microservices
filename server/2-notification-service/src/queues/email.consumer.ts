@@ -2,7 +2,7 @@ import { config } from '@notifications/config';
 import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Channel, ConsumeMessage } from 'amqplib';
 import { Logger } from 'winston';
-import { createConnection } from '@notifications/connection';
+import { createConnection } from '@notifications/queues/connection';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'emailConsumer', 'debug');
 
@@ -45,6 +45,7 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
       // Implements TODO:
       // @ Send emails
       // @ Acknowledge
+      channel.ack(msg!);
     });
   } catch (error) {
     log.error('error', 'NotificationService EmailConsumer consumeAuthEmailMessages() method error:', error);
