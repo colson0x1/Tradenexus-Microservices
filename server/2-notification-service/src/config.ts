@@ -22,4 +22,5 @@ class Config {
   }
 }
 
+// @ Better name to export -> notificationConfig
 export const config: Config = new Config();
