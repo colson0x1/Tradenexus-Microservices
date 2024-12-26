@@ -52,4 +52,30 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
   }
 }
 
-export { consumeAuthEmailMessages };
+async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+
+    // This is the exchange that will consume message related to Orders
+    // The only message that will be sent from the chat service will be
+    // when the seller sends an offer to the buyer
+    const exchangeName = 'tradenexus-order-notification';
+    const routingKey = 'order-email';
+    const queueName = 'order-email-queue';
+
+    await channel.assertExchange(exchangeName, 'direct');
+    const tradenexusQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(tradenexusQueue.queue, exchangeName, routingKey);
+    channel.consume(tradenexusQueue.queue, async (msg: ConsumeMessage | null) => {
+      console.log(JSON.parse(msg!.content.toString()));
+      channel.ack(msg!);
+      // @ Send emails
+      // @ Acknowledge
+    });
+  } catch (error) {
+    log.error('error', 'NotificationService EmailConsumer consumeOrderEmailMessages() method error:', error);
+  }
+}
+export { consumeAuthEmailMessages, consumeOrderEmailMessages };
