@@ -8,8 +8,7 @@ import Email from 'email-templates';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'mailTransportHelper', 'debug');
 
-// `to` is receiver
-async function emailTemplatest(template: string, to: string, locals: IEmailLocals): Promise<void> {
+async function emailTemplates(template: string, receiver: string, locals: IEmailLocals): Promise<void> {
   try {
     const smtpTransport: Transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
@@ -48,9 +47,19 @@ async function emailTemplatest(template: string, to: string, locals: IEmailLocal
         }
       }
     });
+
+    await email.send({
+      template: path.join(__dirname, '..', 'src/emails', template),
+      message: { to: receiver },
+      // locals represents properties inside of our ejs email templates like
+      // appLink, appIcon
+      locals
+    });
   } catch (error) {
     // We don't need to send the `error` here because we're going to get a
     // message inside our mail transport (`mail.transport.ts`)
     log.error(error);
   }
 }
+
+export { emailTemplates };
