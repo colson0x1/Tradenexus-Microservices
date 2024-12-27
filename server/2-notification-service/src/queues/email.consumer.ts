@@ -1,8 +1,9 @@
 import { config } from '@notifications/config';
-import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { IEmailLocals, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Channel, ConsumeMessage } from 'amqplib';
 import { Logger } from 'winston';
 import { createConnection } from '@notifications/queues/connection';
+import { sendEmail } from '@notifications/queues/mail.transport';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'emailConsumer', 'debug');
 
@@ -39,11 +40,21 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
     channel.consume(tradenexusQueue.queue, async (msg: ConsumeMessage | null) => {
       // Message will be sent as either 'buffers' or as 'strings'
       // If its a string, we need to pass the data using JSON.parse()
-      console.log(JSON.parse(msg!.content.toString()));
+      /* console.log(JSON.parse(msg!.content.toString())); */
+      const { receiverEmail, username, verifyLink, resetLink, template } = JSON.parse(msg!.content.toString());
+      // `locals` are just properties that we want to display in our templates
+      const locals: IEmailLocals = {
+        appLink: `${config.CLIENT_URL}`,
+        appIcon: 'https://i.ibb.co/Y8NDWmV/tradenexus.png',
+        username,
+        verifyLink,
+        resetLink
+      };
+
       // Here im not adding acknowledge because if we send any message, we
       // want to see it in the queue before we acknowledge them.
-      // Implements TODO:
       // @ Send emails
+      await sendEmail(template, receiverEmail, locals);
       // @ Acknowledge
       channel.ack(msg!);
     });

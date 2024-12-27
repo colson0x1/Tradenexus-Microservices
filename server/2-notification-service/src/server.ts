@@ -1,7 +1,7 @@
 import 'express-async-errors';
 import http from 'http';
 
-import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { IEmailMessageDetails, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@notifications/config';
 import { Application } from 'express';
@@ -25,14 +25,24 @@ async function startQueues(): Promise<void> {
   const emailChannel: Channel = (await createConnection()) as Channel;
   await consumeAuthEmailMessages(emailChannel);
   await consumeOrderEmailMessages(emailChannel);
+  const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=1234567890abcdef`;
+  const messageDetails: IEmailMessageDetails = {
+    receiverEmail: `${config.SENDER_EMAIL}`,
+    resetLink: verificationLink,
+    username: 'stillhome',
+    // template is the name of the template folder inside emails dir
+    template: 'forgotPassword'
+  };
 
   await emailChannel.assertExchange('tradenexus-email-notification', 'direct');
-  const message = JSON.stringify({ name: 'tradenexus', service: 'auth notification service' });
+  /* const message = JSON.stringify({ name: 'tradenexus', service: 'auth notification service' }); */
+  const message = JSON.stringify(messageDetails);
+  // @ .publish(exchange, routingKey, message)
   emailChannel.publish('tradenexus-email-notification', 'auth-email', Buffer.from(message));
 
-  await emailChannel.assertExchange('tradenexus-order-notification', 'direct');
+  /* await emailChannel.assertExchange('tradenexus-order-notification', 'direct');
   const message1 = JSON.stringify({ name: 'tradenexus', service: 'order notification service' });
-  emailChannel.publish('tradenexus-order-notification', 'order-email', Buffer.from(message1));
+  emailChannel.publish('tradenexus-order-notification', 'order-email', Buffer.from(message1)); */
 }
 
 function startElasticSearch(): void {
