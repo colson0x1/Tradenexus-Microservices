@@ -25,6 +25,10 @@ async function startQueues(): Promise<void> {
   const emailChannel: Channel = (await createConnection()) as Channel;
   await consumeAuthEmailMessages(emailChannel);
   await consumeOrderEmailMessages(emailChannel);
+
+  /*
+  // @ Testing order and email notification
+
   const verificationLink = `${config.CLIENT_URL}/confirm_email?v_token=1234567890abcdef`;
   const messageDetails: IEmailMessageDetails = {
     receiverEmail: `${config.SENDER_EMAIL}`,
@@ -35,14 +39,15 @@ async function startQueues(): Promise<void> {
   };
 
   await emailChannel.assertExchange('tradenexus-email-notification', 'direct');
-  /* const message = JSON.stringify({ name: 'tradenexus', service: 'auth notification service' }); */
+  // const message = JSON.stringify({ name: 'tradenexus', service: 'auth notification service' });
   const message = JSON.stringify(messageDetails);
   // @ .publish(exchange, routingKey, message)
   emailChannel.publish('tradenexus-email-notification', 'auth-email', Buffer.from(message));
 
-  /* await emailChannel.assertExchange('tradenexus-order-notification', 'direct');
+  await emailChannel.assertExchange('tradenexus-order-notification', 'direct');
   const message1 = JSON.stringify({ name: 'tradenexus', service: 'order notification service' });
-  emailChannel.publish('tradenexus-order-notification', 'order-email', Buffer.from(message1)); */
+  emailChannel.publish('tradenexus-order-notification', 'order-email', Buffer.from(message1));
+*/
 }
 
 function startElasticSearch(): void {

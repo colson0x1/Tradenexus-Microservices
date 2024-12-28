@@ -51,8 +51,6 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
         resetLink
       };
 
-      // Here im not adding acknowledge because if we send any message, we
-      // want to see it in the queue before we acknowledge them.
       // @ Send emails
       await sendEmail(template, receiverEmail, locals);
       // @ Acknowledge
@@ -63,6 +61,8 @@ async function consumeAuthEmailMessages(channel: Channel): Promise<void> {
   }
 }
 
+// This  will consume messages coming from the Chat service, if a buyer places
+// an order and also if a seller sends an offer
 async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
   try {
     if (!channel) {
@@ -80,13 +80,92 @@ async function consumeOrderEmailMessages(channel: Channel): Promise<void> {
     const tradenexusQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
     await channel.bindQueue(tradenexusQueue.queue, exchangeName, routingKey);
     channel.consume(tradenexusQueue.queue, async (msg: ConsumeMessage | null) => {
-      console.log(JSON.parse(msg!.content.toString()));
+      // console.log(JSON.parse(msg!.content.toString()));
+      // If an order is placed by a buyer and then pays successfully, we want
+      // to send two emails. The first one will be, we send that a buyer has
+      // placed an order and then we send another email to the buyer with
+      // the receipt.
+      // So we send to the buyer the receipt and then we send to the seller
+      // the message that the order has been placed.
+      // So we first send them a stringified properties and then here parse
+      // them back to the original format and then we destructure i.e we
+      // get them from message content and then we construct our locals.
+      const {
+        receiverEmail,
+        username,
+        template,
+        sender,
+        offerLink,
+        amount,
+        buyerUsername,
+        sellerUsername,
+        title,
+        description,
+        deliveryDays,
+        orderId,
+        orderDue,
+        requirements,
+        orderUrl,
+        originalDate,
+        newDate,
+        reason,
+        subject,
+        header,
+        type,
+        message,
+        serviceFee,
+        total
+      } = JSON.parse(msg!.content.toString());
+      const locals: IEmailLocals = {
+        appLink: `${config.CLIENT_URL}`,
+        appIcon: 'https://i.ibb.co/Y8NDWmV/tradenexus.png',
+        username,
+        sender,
+        offerLink,
+        amount,
+        buyerUsername,
+        sellerUsername,
+        title,
+        description,
+        deliveryDays,
+        orderId,
+        orderDue,
+        requirements,
+        orderUrl,
+        originalDate,
+        newDate,
+        reason,
+        subject,
+        header,
+        type,
+        message,
+        serviceFee,
+        total
+      };
+
+      // `template` name is the name of the folder inside emails dir
+      if (template === 'orderPlaced') {
+        // Telling the seller that a buyer has placed an order
+        await sendEmail('orderPlaced', receiverEmail, locals);
+        await sendEmail('orderReceipt', receiverEmail, locals);
+      } else {
+        // i.e if the template is 'orderDelivered', 'orderExtension' like that
+        await sendEmail(template, receiverEmail, locals);
+      }
+
       channel.ack(msg!);
-      // @ Send emails
-      // @ Acknowledge
     });
   } catch (error) {
     log.error('error', 'NotificationService EmailConsumer consumeOrderEmailMessages() method error:', error);
   }
 }
+
+// Didn't create a separate method to consume from Chat Service
+// (i.e consumeChatEmailMessages) because the message that will be sent
+// from the Chat service will just be when a user sends an offer. So when
+// they sends an offer, Im going to use this same exchange, routing key and
+// queue name which was used to consume message from Order Service
+// (i.e tradenexus-order-notification, order-email, order-email-queue)
+// We can though create a separate method to handle the offer email.
+
 export { consumeAuthEmailMessages, consumeOrderEmailMessages };
