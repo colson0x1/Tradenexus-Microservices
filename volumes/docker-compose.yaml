@@ -289,6 +289,30 @@ services:
     # Kibana depends on Elasticsearch.
     depends_on:
       - elasticsearch
+  notifications:
+    container_name: notification_container
+    # THis is where we need to set the Docker image that it requires or the
+    # Docker file it needs to use
+    build:
+      # context is where we have the file
+      context: ../server/2-notification-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4001:4001
+    env_file: ../server/2-notification-service/.env
+    environment:
+      - ENABLE_APM=0
+      - NODE_ENV=development
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://colson:stillhome@rabbitmq_container:5672
+      - SENDER_EMAIL=warren.smith@ethereal.email
+      - SENDER_EMAIL_PASSWORD=2JgKZu9VmbKMxQuwGn
+      - ELASTIC_SEARCH_URL=http://elasticsearch_container:9200
+      - ELASTIC_APM_SERVER_URL=http://localhost:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
 
 #Tell Docker Compose to create a network called elastic so that any
 # service (container) that needs to communicate with other services
