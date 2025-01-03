@@ -20,7 +20,7 @@
 
 import * as connection from '@notifications/queues/connection';
 import amqp from 'amqplib';
-import { consumeAuthEmailMessages } from '@notifications/queues/email.consumer';
+import { consumeAuthEmailMessages, consumeOrderEmailMessages } from '@notifications/queues/email.consumer';
 
 jest.mock('@notifications/queues/connection');
 jest.mock('amqplib');
@@ -34,6 +34,9 @@ describe('Email Consumer', () => {
     jest.resetAllMocks();
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
   // If this method `consumeAuthEmailMessages` is called, we want to assert
   // and check that `assertExchange`, `assertQueue`, and `bindQueue` are called
   describe('consumeAuthEmailMessages method', () => {
@@ -57,10 +60,42 @@ describe('Email Consumer', () => {
       // email.consumer.ts
       const connectionChannel: amqp.Channel | undefined = await connection.createConnection();
       await consumeAuthEmailMessages(connectionChannel!);
+
+      // Assert that assertExchange was called with all of these properties
+      // i.e (exchangeName, exchangeType)
+      expect(connectionChannel!.assertExchange).toHaveBeenCalledWith('tradenexus-email-notification', 'direct');
+      // Here we dont want to check if it was called with all of the properties
+      // that it shuold be called with. But instead, we're gonna check that
+      // this assertQueue was called at least once.
+      expect(connectionChannel!.assertQueue).toHaveBeenCalledTimes(1);
+      // check if consume method was also called
+      expect(connectionChannel!.consume).toHaveBeenCalledTimes(1);
+      // Assert that bindQueue was called with all of these properties
+      // i.e (queueName, exchangeName, routingKey)
+      expect(connectionChannel!.bindQueue).toHaveBeenCalledWith('auth-email-queue', 'tradenexus-email-notification', 'auth-email');
     });
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  /* @ Test for consumeOrderEmailMessages */
+  describe('consumeOrderEmailMessages method', () => {
+    it('should be called', async () => {
+      const channel = {
+        assertExchange: jest.fn(),
+        publish: jest.fn(),
+        assertQueue: jest.fn(),
+        bindQueue: jest.fn(),
+        consume: jest.fn()
+      };
+      jest.spyOn(channel, 'assertExchange');
+      jest.spyOn(channel, 'assertQueue').mockReturnValue({ queue: 'order-email-queue', messageCount: 0, consumerCount: 0 });
+      jest.spyOn(connection, 'createConnection').mockReturnValue(channel as never);
+      const connectionChannel: amqp.Channel | undefined = await connection.createConnection();
+      await consumeOrderEmailMessages(connectionChannel!);
+
+      expect(connectionChannel!.assertExchange).toHaveBeenCalledWith('tradenexus-order-notification', 'direct');
+      expect(connectionChannel!.assertQueue).toHaveBeenCalledTimes(1);
+      expect(connectionChannel!.consume).toHaveBeenCalledTimes(1);
+      expect(connectionChannel!.bindQueue).toHaveBeenCalledWith('order-email-queue', 'tradenexus-order-notification', 'order-email');
+    });
   });
 });

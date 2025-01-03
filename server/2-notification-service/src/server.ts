@@ -1,7 +1,7 @@
 import 'express-async-errors';
 import http from 'http';
 
-import { IEmailMessageDetails, winstonLogger } from '@colson0x1/tradenexus-shared';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@notifications/config';
 import { Application } from 'express';
