@@ -9,9 +9,10 @@ import hpp from 'hpp';
 import helmet from 'helmet';
 import compression from 'compression';
 import { StatusCodes } from 'http-status-codes';
+import { config } from '@gateway/config';
 
 const SERVER_PORT = 4000;
-const log: Logger = winstonLogger('http://localhost:9200', 'apiGatewayServer', 'debug');
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
 
 // When we initialize this class, its going to take in an instance of express
 export class GatewayServer {
@@ -56,7 +57,7 @@ export class GatewayServer {
         // name: 'tradenexus-session'
         name: 'session',
         // secret keys
-        keys: [],
+        keys: [`${config.SECRET_KEY_ONE}`, `${config.SECRET_KEY_TWO}`],
         // Token is valid for 7 days
         maxAge: 24 * 7 * 360000,
         // secure is very very important.
@@ -66,15 +67,30 @@ export class GatewayServer {
         // set to true and then, if we use http protocol to access it, then
         // the API Gateway will be throwing errors.
         // So if secure it set to true, then the protocol must be https.
-        secure: false // update with value from config
+        secure: config.NODE_ENV !== 'development'
         // Also, once deployed to production, this sameSite should be
         // uncommented because Firefox and Chrome, they have a different
         // implementation of this `sameSite` property.
         // sameSite: none
       })
     );
-    // hpp is a security module
+    // hpp is a security module.
+    // hpp stands for HTTP parameter pollution it prevents hpp atacks in web
+    // applications like if attackers try to inject multiple parameters with
+    // the same name into HTTP request, aiming to confuse the server side
+    // logic or bypass security checks, using hpp package ensures that any
+    // repeated query string parameters are properly sanitized, usually by
+    // preserving the first occurrence of each parameter and discarding the
+    // subsequent ones. this helps preventing attackers from exploiting
+    // such vulnerabilities
     app.use(hpp());
+    //  helmet is a collection of middleware functions designed to help secure
+    //  HTTP headers in a web application, primarily built with Node.js and
+    //  Express.
+    //  It sets various HTTP headers to protect against common security
+    //  vulnerabilities, such as cross-site scripting (XSS), clickjacking,
+    //  and other types of attacks that can exploit weaknesses in a web
+    //  application.
     app.use(helmet());
     // cors will allow our client and our api gateway to communicate because
     // they are going to be on different origins. so it will allow them to
@@ -82,7 +98,7 @@ export class GatewayServer {
     app.use(
       cors({
         // origin is going to be client
-        origin: '',
+        origin: config.CLIENT_URL,
         // set credentials to true so that we can attach our token to every
         // request coming from the client
         credentials: true,
