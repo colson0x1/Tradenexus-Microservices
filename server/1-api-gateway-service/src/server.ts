@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import { StatusCodes } from 'http-status-codes';
 import { config } from '@gateway/config';
+import { elasticSearch } from '@gateway/elasticsearch';
 
 const SERVER_PORT = 4000;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
@@ -125,7 +126,9 @@ export class GatewayServer {
 
   private routesMiddleware(): void {}
 
-  private startElasticSearch(): void {}
+  private startElasticSearch(): void {
+    elasticSearch.checkConnection();
+  }
 
   private errorHandler(app: Application): void {
     // Check if maybe there is a request or a URL that doesn't exist and its
