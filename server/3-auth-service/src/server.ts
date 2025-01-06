@@ -1,16 +1,29 @@
-import { IAuthPayload, winstonLogger } from '@colson0x1/tradenexus-shared';
+import http from 'http';
+
+import { CustomError, IAuthPayload, IErrorResponse, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@auth/config';
-import { Application, NextFunction, Request, Response } from 'express';
+import { Application, json, NextFunction, Request, Response, urlencoded } from 'express';
 import hpp from 'hpp';
 import helmet from 'helmet';
 import cors from 'cors';
 import { verify } from 'jsonwebtoken';
+import compression from 'compression';
+import { checkConnection } from '@auth/elasticsearch';
+import { StatusCodes } from 'http-status-codes';
 
 const SERVER_PORT = 4002;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authenticationServer', 'debug');
 
-export function start(app: Application): void {}
+export function start(app: Application): void {
+  securityMiddleware(app);
+  standardMiddleware(app);
+  routesMiddleware(app);
+  startQueues();
+  startElasticSearch();
+  authErrorHandler(app);
+  startServer(app);
+}
 
 function securityMiddleware(app: Application): void {
   app.set('trust proxy', 1);
@@ -68,4 +81,74 @@ function securityMiddleware(app: Application): void {
 
   // Here im not adding anything related to cookie session because its handled
   // on the Api Gateway
+}
+
+// @ middleware with the compressed JSON URL encoded
+// We're setting json() and urlencoded() so that we can be able to send
+// JSON data and also we can use req.body while the above compression()
+// will enable the request size to be compressed so we don't have a very
+// large size when sending the data across to the server. That is what this
+// standardMiddleware does.
+function standardMiddleware(app: Application): void {
+  // This will just be used to compress the request to make it the size
+  // lower or to reduce the size
+  app.use(compression());
+  // setting maximum size of our json request
+  app.use(json({ limit: '200mb' }));
+  // Because we're going to be passing data through request.body so we need
+  // to setup urlencoded cause without this, we won't be able to set up
+  // our request.body
+  // So with this middleware right below, when we send data through the body
+  // through a POST request, we can get it via request.body
+  app.use(urlencoded({ extended: true, limit: '200mb' }));
+}
+
+function routesMiddleware(app: Application): void {
+  console.log(app);
+}
+
+async function startQueues(): Promise<void> {}
+
+function startElasticSearch(): void {
+  checkConnection();
+}
+
+function authErrorHandler(app: Application): void {
+  // Here only just have to catch any error that is of type CustomError
+
+  // Check for CustomError
+  // So here we're using this to catch all the errors that we have in the
+  // application and then we log the errors. In the error object, we have
+  // `comingFrom` property so we're logging the error and its going to send
+  // the error to Elasticsearch and Kibana.
+  // But the errors that we want to send to API gateway so that it can
+  // send it back to the user is an error object that is of type CustomError.
+  // So for exmaple, if the user tries to log in with invalid credentials,
+  // we're going to send the invalid credentials error message to the user.
+  // So because its client side errror, we're going to send it to the user.
+  // that is what it means in: `if (error instsanceof CustomError) {}`
+  app.use((error: IErrorResponse, _req: Request, res: Response, next: NextFunction) => {
+    log.log('error', `AuthService ${error.comingFrom}:`, error);
+    // CustomError is the name of the abstract class and each of the error
+    // class is extending from CustomError
+    // If error object we get is of type CustomError i.e if the error instance
+    // is of type CustomError, then
+    if (error instanceof CustomError) {
+      res.status(error.statusCode).json(error.serializeErrors());
+    }
+    res.status(StatusCodes.NOT_FOUND).json({ message: 'The endpoint called does not exist.' });
+    next();
+  });
+}
+
+function startServer(app: Application): void {
+  try {
+    const httpServer: http.Server = new http.Server(app);
+    log.info(`Authentication server has started with process id ${process.pid}`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Authentication server running on port ${SERVER_PORT}`);
+    });
+  } catch (error) {
+    log.error('error', 'AuthService startServer() method error', error);
+  }
 }
