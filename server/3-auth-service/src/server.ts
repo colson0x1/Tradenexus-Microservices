@@ -12,9 +12,16 @@ import compression from 'compression';
 import { checkConnection } from '@auth/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@auth/routes';
+import { Channel } from 'amqplib';
+import { createConnection } from '@auth/queues/connection';
 
 const SERVER_PORT = 4002;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authenticationServer', 'debug');
+
+// Whatever channel will be returned from createConnection from connection.ts.
+// That will be set to this authChannel
+// This variable will be used outside of this file.
+export let authChannel: Channel;
 
 export function start(app: Application): void {
   securityMiddleware(app);
@@ -108,7 +115,10 @@ function routesMiddleware(app: Application): void {
   appRoutes(app);
 }
 
-async function startQueues(): Promise<void> {}
+async function startQueues(): Promise<void> {
+  // Set authChannel to whatever is returned from this createConnection()
+  authChannel = (await createConnection()) as Channel;
+}
 
 function startElasticSearch(): void {
   checkConnection();
