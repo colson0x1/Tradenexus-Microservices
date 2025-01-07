@@ -2,14 +2,10 @@
 FROM node:21-alpine3.18 as builder
 
 WORKDIR /app
-COPY package.json ./
+COPY package*.json ./
 COPY tsconfig.json ./
 COPY .npmrc ./
 COPY src ./src
-# Make sure it will have these files (i.e file in tools dir) to execute the
-# command or before it runs npm run build, inside the docker container before
-# it starts the container
-COPY tools ./tools
 RUN npm install -g npm@latest
 RUN npm ci && npm run build
 
@@ -24,7 +20,7 @@ WORKDIR /app
 # cluster. So we need `curl`
 # Because we're using alpine version for image, we've access to apk
 RUN apk add --no-cache curl
-COPY package.json ./
+COPY package*.json ./
 COPY tsconfig.json ./
 COPY .npmrc ./
 # Also install PM2 globally in the container: not just in the service itself.

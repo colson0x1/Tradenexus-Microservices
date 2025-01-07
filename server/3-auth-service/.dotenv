@@ -5,17 +5,14 @@ GATEWAY_JWT_TOKEN=
 # This is going to be the token that will allow request from the client
 JWT_TOKEN=
 NODE_ENV=development
-SECRET_KEY_ONE=
-SECRET_KEY_TWO=
+API_GATEWAY_URL=http://localhost:4000
 CLIENT_URL=http://localhost:3000
-# Endpoints for the different services
-AUTH_BASE_URL=http://localhost:4002
-USERS_BASE_URL=http://localhost:4003
-GIG_BASE_URL=http://localhost:4004
-MESSAGE_BASE_URL=http://localhost:4005
-ORDER_BASE_URL=http://localhost:4006
-REVIEW_BASE_URL=http://localhost:4007
-REDIS_HOST=redis://localhost:6379
+RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
+# mysql://<db-username>:<db-password>@<db-host>:<port>/<db-name>
+MYSQL_DB=mysql://colson:stillhome@localhost:3306/tradenexus_auth
+CLOUD_NAME=
+CLOUD_API_KEY=
+CLOUD_API_SECRET=
 ELASTIC_SEARCH_URL=http://localhost:9200
 ELASTIC_APM_SERVER_URL=http://localhost:8200
 ELASTIC_APM_SECRET_TOKEN=

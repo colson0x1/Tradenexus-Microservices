@@ -12,6 +12,8 @@ const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authDatabaseS
 // services
 // i.e the reason why im exporting this Sequelize instance is because we'll
 // need it inside our services when we want to make our queries.
+// Here, Sequelize expects the URI string that is the database URL string and
+// then options.
 export const sequelize = new Sequelize(config.MYSQL_DB!, {
   // dialect is just like the type of database i.e mysql, postgresql, etc
   dialect: 'mysql',
