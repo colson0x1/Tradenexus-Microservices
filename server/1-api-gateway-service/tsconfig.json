@@ -24,5 +24,7 @@
     "paths": {
       "@gateway/*": ["src/*"]
     }
-  }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
