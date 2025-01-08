@@ -45,6 +45,8 @@ type AuthUserCreationAttributes = Optional<IAuthDocument, 'id' | 'createdAt' | '
 const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthModelInstanceMethods = sequelize.define(
   'auths',
   {
+    // The `id` will be automatically created and automatically indexed as
+    // well.
     username: {
       type: DataTypes.STRING,
       allowNull: false
@@ -117,6 +119,12 @@ const AuthModel: ModelDefined<IAuthDocument, AuthUserCreationAttributes> & AuthM
       {
         unique: true,
         fields: ['username']
+      },
+      // adding index to also emailVerificationToken field because later im
+      // going to search the table
+      {
+        unique: true,
+        fields: ['emailVerificationToken']
       }
     ]
   }
