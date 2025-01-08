@@ -7,10 +7,12 @@
 // added to a MongoDB database. So once i create a user and the user creation
 // is successful, im going to publish an event to a buyer exchange.
 
+import { config } from '@auth/config';
 import { AuthModel } from '@auth/models/auth.schema';
 import { publishDirectMessage } from '@auth/queues/auth.producer';
 import { authChannel } from '@auth/server';
 import { firstLetterUppercase, IAuthBuyerMessageDetails, IAuthDocument } from '@colson0x1/tradenexus-shared';
+import { sign } from 'jsonwebtoken';
 import { lowerCase, omit } from 'lodash';
 import { Model, Op } from 'sequelize';
 
@@ -178,4 +180,78 @@ export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDo
     }
   })) as Model;
   return user.dataValues;
+}
+
+// For the password verification, if the user verifies the password then
+// we update the `emailVerified`  property and set it to 1. By default,
+// emailVerified is set to 0 i.e false.
+// updateVerifyEmailField will take the id because we're going to find the
+// document or the row by the `id`, `emailVerified` and `emailVerificationToken`
+// Now this is not going to reutrn anything i.e Promise<void> because
+// we're not going to use the udpated value
+export async function updateVerifyEmailField(authId: number, emailVerified: number, emailVerificationToken: string): Promise<void> {
+  await AuthModel.update(
+    // what field do we want to update is, we want to upda the emailVerified
+    // field and the emailVerificationToken
+    {
+      emailVerified,
+      emailVerificationToken
+    },
+    // `where` clause has to be after the field i.e the block for the fields
+    // that we want to actully update
+    // So, which document we want to update is the document where `id` matches
+    // the `authId`
+    { where: { id: authId } }
+  );
+}
+
+// Update the password token
+// So this is when the user wants to change their password when they are already
+// logged in.
+export async function updatePasswordToken(authId: number, token: string, tokenExpiration: Date): Promise<void> {
+  await AuthModel.update(
+    {
+      passwordResetToken: token,
+      passwordResetExpires: tokenExpiration
+    },
+    // And then, we want to update those above properties i.e `passwordResetToken`
+    // and `passwordResetExpires`, on a document where the `id` matches the
+    // `authId`
+    { where: { id: authId } }
+  );
+}
+
+// Also update the password fields
+export async function updatePassword(authId: number, password: string): Promise<void> {
+  await AuthModel.update(
+    {
+      // set the password to whatever password the user adds
+      password,
+      passwordResetToken: '',
+      passwordResetExpires: new Date()
+    },
+    // And then, we want to update those above properties on a document where
+    // the `id` matches the `authId`
+    { where: { id: authId } }
+  );
+}
+
+// Method to sign (i.e update) our jwt token
+export function signToken(id: number, email: string, username: string): string {
+  // With this, when we call this signToken method passing these properties,
+  // it will always return a signed JWT token.
+  return sign(
+    // NOTE: There's a size requirement for data that we add to our JWT token.
+    // It will not be allowed if we tend to add a complete document that has
+    // very large size. So we just only save data, that we're going to use
+    // multiple times in our JWT token.
+    // so what do we want to add to the token
+    {
+      id,
+      email,
+      username
+    },
+    // we want to sign it with this value
+    config.JWT_TOKEN!
+  );
 }
