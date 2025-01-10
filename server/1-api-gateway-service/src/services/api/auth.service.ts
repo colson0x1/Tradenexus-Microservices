@@ -1,6 +1,9 @@
-import axios from 'axios';
+/* @ All the methods we need inside the Auth Service is in this API Gateway */
+
+import axios, { AxiosResponse } from 'axios';
 import { AxiosService } from '@gateway/services/axios';
 import { config } from '@gateway/config';
+import { IAuth } from '@colson0x1/tradenexus-shared';
 
 // NOTE: Im not going to use the same axios instance for all the services. So
 // each servive will have its own Axios Instance. The reasons for it is, we need
@@ -24,6 +27,82 @@ class AuthService {
     // instance property, we need the axios. This is why axios instance is
     // equal to this.axiosService.axios
     axiosAuthInstance = this.axiosService.axios;
+  }
+
+  // Im going to use axiosAuthInstance. THe reason im why im using axiosAuthInstance
+  // and not this.axiosService is because for the currentUser to get the current user,
+  // the user has to be already be logged in. ANd current user route is going
+  // to be a protected route. We are only be able to access it if the user is
+  // logged in.
+  // So if we want to make requests to endpoints in the authentication service
+  // that is not protected, we used `this.axiosService`. The reason is, on
+  // gateway/src/server.ts, so on `axiosAuthInstance`, im adding the Bearer
+  // token to the Authorization i.e axiosAuthInstance.defaults.headers line,
+  // butim not adding it to the axiosService instance here on the constructor.
+  async getCurrentUser(): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get('/currentUser');
+    return response;
+  }
+
+  async getRefreshToken(username: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.get(`/refresh-token/${username}`);
+    return response;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/change-password', { currentPassword, newPassword });
+    return response;
+  }
+  // For resendEmail, the user needs to be logged in so `axiosAuthInstance`
+  // Im destucturing and defining type here because I dont have a type defined
+  async resendEmail(data: { userId: number; email: string }): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.post('/resend-email', data);
+    return response;
+  }
+
+  // AxiosService that dont require to access a protected route
+  async signUp(body: IAuth): Promise<AxiosResponse> {
+    // the `body` is an object, so we can pass it directly right here on the
+    // second argument
+    const response: AxiosResponse = await this.axiosService.axios.post('/signup', body);
+    return response;
+  }
+
+  // NOTE:  On `getCurrentUser()`, `getRefreshToken()` and `changePassword()`
+  // methods, im using `axiosAuthInstance` because I want to acess routes
+  // that are protected. So it requires the JWT token. But here, im using
+  // `this.axiosService.axios` because im accessing routes that are
+  // not protected with the user doesn't need to be logged in to access this
+  // routes.
+  async signIn(body: IAuth): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.post('/signin', body);
+    return response;
+  }
+
+  async forgotPassword(email: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put('/forgot-password', { email });
+    return response;
+  }
+
+  async resetPassword(token: string, password: string, confirmPassword: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/reset-password/${token}`, { password, confirmPassword });
+    return response;
+  }
+
+  async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
+    return response;
+  }
+
+  async getGig(gigId: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${gigId}`);
+    return response;
+  }
+
+  // count is the number of items we want to create
+  async seed(count: number): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.get(`/seed/${count}`);
+    return response;
   }
 }
 
