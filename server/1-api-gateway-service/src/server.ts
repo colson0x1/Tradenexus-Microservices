@@ -12,6 +12,7 @@ import { StatusCodes } from 'http-status-codes';
 import { config } from '@gateway/config';
 import { elasticSearch } from '@gateway/elasticsearch';
 import { appRoutes } from '@gateway/routes';
+import { axiosAuthInstance } from '@gateway/services/api/auth.service';
 
 const SERVER_PORT = 4000;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
@@ -108,6 +109,34 @@ export class GatewayServer {
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
       })
     );
+    // The purpose of this middleware is to add the bearer token. So when the
+    // request comes from the frontend and then before the API gateway sends the
+    // request to the respective service, lets say auth service, its going to
+    // add the bearer token to the headers.
+    // So in nutshell, whats going to happen here is, before Axios makes a
+    // request to the authentication service, its going to check if the
+    // `req.session?.jwt` exists. If it does, then add it as a bearer token. Add
+    // it to the authorization headers.
+    // And in the auth service server.ts, on the line:
+    // `const payload: IAuthPayload = verify(token, config.JWT_TOKEN!) as IAuthPayload`
+    // That is where im checking to verify the token. So when the request comes,
+    // we're still going to verify that it's a valid token using that `verify()`.
+    // If its not a valid token, we throw an error. We reject the request. If
+    // its a valid token, we allow the request to proceed.
+    app.use((req: Request, _res: Response, next: NextFunction) => {
+      if (req.session?.jwt) {
+        // Now we want to append the token to this axios instance i.e
+        // axiosAuthInstance in api/auth.service.ts
+        // Here, if we want to use axios to maybe update dynamically or add
+        // the property to the headers dynamically, this is how we do it.
+        // i.e `axiosAuthInstance.defaults.headers`
+        // and then what we want to update is 'Authorization' header.
+        // So here we're adding bearer token to the authorization header
+        // for auth axios instance
+        axiosAuthInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+      }
+      next();
+    });
   }
 
   // @ middleware with the compressed JSON URL encoded
