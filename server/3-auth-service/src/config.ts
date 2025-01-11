@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import cloudinary from 'cloudinary';
 
 dotenv.config({});
 
@@ -27,6 +28,18 @@ class Config {
     this.API_GATEWAY_URL = process.env.API_GATEWAY_URL || '';
     this.CLIENT_URL = process.env.CLIENT_URL || '';
     this.ELASTIC_SEARCH_URL = process.env.ELASTIC_SEARCH_URL || '';
+  }
+
+  public cloudinaryConfig(): void {
+    // `cloudinary.v2.config` will enable us to set the config and inside it
+    // we provide the configuration
+    cloudinary.v2.config({
+      // Now because im already inside this class and the properties are set
+      // in the constructor, i can just use `this.CLOUD_NAME`
+      cloud_name: this.CLOUD_NAME,
+      api_key: this.CLOUD_API_KEY,
+      api_secret: this.CLOUD_API_SECRET
+    });
   }
 }
 
