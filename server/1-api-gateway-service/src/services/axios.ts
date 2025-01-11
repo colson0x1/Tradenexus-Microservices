@@ -78,7 +78,7 @@ export class AxiosService {
         // inside of headers
         // i.e if (!req.headers?.gatewayToken) {}
         // So, need to set here.
-        gatewayToken: requestGatewayToken
+        gatewaytoken: requestGatewayToken
       },
       // withCredentials is very important so that the token will be added
       // to the request. Because we're saving it on the cookie session, so

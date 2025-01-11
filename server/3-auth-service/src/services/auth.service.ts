@@ -111,7 +111,7 @@ export async function getAuthUserById(authId: number): Promise<IAuthDocument> {
       exclude: ['password']
     }
   })) as Model;
-  return user.dataValues;
+  return user?.dataValues;
 }
 
 export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument> {
@@ -130,7 +130,10 @@ export async function getUserByUsernameOrEmail(username: string, email: string):
       [Op.or]: [{ username: firstLetterUppercase(username) }, { email: lowerCase(email) }]
     }
   })) as Model;
-  return user.dataValues;
+  // We need ? on user? is because, if it doesnt find any document and then
+  // we try to get the dataValues on user, it will throw an error because
+  // it is null.
+  return user?.dataValues;
 }
 
 // Also implement, get by username and then get by email separately
@@ -139,7 +142,7 @@ export async function getUserByUsername(username: string): Promise<IAuthDocument
   const user: Model = (await AuthModel.findOne({
     where: { username: firstLetterUppercase(username) }
   })) as Model;
-  return user.dataValues;
+  return user?.dataValues;
 }
 
 // @ Get by email
@@ -147,7 +150,7 @@ export async function getUserByEmail(email: string): Promise<IAuthDocument> {
   const user: Model = (await AuthModel.findOne({
     where: { email: lowerCase(email) }
   })) as Model;
-  return user.dataValues;
+  return user?.dataValues;
 }
 
 // Will be used to verify the user's email
@@ -160,7 +163,7 @@ export async function getAuthUserByVerificationToken(token: string): Promise<IAu
       exclude: ['password']
     }
   })) as Model;
-  return user.dataValues;
+  return user?.dataValues;
 }
 
 // This will be if the user is already logged in and they want to update their
@@ -179,7 +182,7 @@ export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDo
       [Op.and]: [{ passwordResetToken: token }, { passwordResetExpires: { [Op.gt]: new Date() } }]
     }
   })) as Model;
-  return user.dataValues;
+  return user?.dataValues;
 }
 
 // For the password verification, if the user verifies the password then

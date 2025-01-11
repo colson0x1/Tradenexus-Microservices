@@ -347,36 +347,36 @@ services:
       - ELASTIC_APM_SECRET_TOKEN=
     depends_on:
       - elasticsearch
-  # auth:
-  #   container_name: auth_container
-  #   # THis is where we need to set the Docker image that it requires or the
-  #   # Docker file it needs to use
-  #   build:
-  #     # context is where we have the file
-  #     context: ../server/3-auth-service
-  #     dockerfile: Dockerfile.dev
-  #   restart: always
-  #   ports:
-  #     - 4002:4002
-  #   env_file: ../server/3-auth-service/.env
-  #   environment:
-  #     - ENABLE_APM=0
-  #     - GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e
-  #     - JWT_TOKEN=60c60e1f014355049c2493d8d24aacd5e81e7fde4c4e0e3e349f3fe7c8b7fed3
-  #     - NODE_ENV=development
-  #     - API_GATEWAY_URL=http://localhost:4000
-  #     - CLIENT_URL=http://localhost:3000
-  #     - RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
-  #     - MYSQL_DB=mysql://colson:stillhome@localhost:3306/tradenexus_auth
-  #     - CLOUD_NAME=
-  #     - CLOUD_API_KEY=
-  #     - CLOUD_API_SECRET=
-  #     - ELASTIC_SEARCH_URL=http://localhost:9200
-  #     - ELASTIC_APM_SERVER_URL=http://localhost:8200
-  #     - ELASTIC_APM_SECRET_TOKEN=
-  #   depends_on:
-  #     - elasticsearch
-  #     - mysql
+  auth:
+    container_name: auth_container
+    # THis is where we need to set the Docker image that it requires or the
+    # Docker file it needs to use
+    build:
+      # context is where we have the file
+      context: ../server/3-auth-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4002:4002
+    env_file: ../server/3-auth-service/.env
+    environment:
+      - ENABLE_APM=0
+      - GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e
+      - JWT_TOKEN=60c60e1f014355049c2493d8d24aacd5e81e7fde4c4e0e3e349f3fe7c8b7fed3
+      - NODE_ENV=development
+      - API_GATEWAY_URL=http://localhost:4000
+      - CLIENT_URL=http://localhost:3000
+      - RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
+      - MYSQL_DB=mysql://colson:stillhome@localhost:3306/tradenexus_auth
+      - CLOUD_NAME=colson0x1
+      - CLOUD_API_KEY=211615812663681
+      - CLOUD_API_SECRET=RrHVkR9yD8bQpwKMUQE9FXmSlSk
+      - ELASTIC_SEARCH_URL=http://localhost:9200
+      - ELASTIC_APM_SERVER_URL=http://localhost:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mysql
 
 # Tell Docker Compose to create a network called elastic so that any
 # service (container) that needs to communicate with other services
