@@ -148,6 +148,7 @@ function authErrorHandler(app: Application): void {
       res.status(error.statusCode).json(error.serializeErrors());
     }
     res.status(StatusCodes.NOT_FOUND).json({ message: 'The endpoint called does not exist.' });
+    // res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Something went wrong' });
     next();
   });
 }

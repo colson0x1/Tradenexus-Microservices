@@ -23,7 +23,7 @@ class Config {
     this.RABBITMQ_ENDPOINT = process.env.RABBITMQ_ENDPOINT || '';
     this.MYSQL_DB = process.env.MYSQL_DB || '';
     this.CLOUD_NAME = process.env.CLOUD_NAME || '';
-    this.CLOUD_API_KEY = process.env.CLOUD_API_KEY || '';
+    this.CLOUD_API_KEY = process.env.CLOUD_API_SECRET || '';
     this.CLOUD_API_SECRET = process.env.CLOUD_API_SECRET || '';
     this.API_GATEWAY_URL = process.env.API_GATEWAY_URL || '';
     this.CLIENT_URL = process.env.CLIENT_URL || '';
@@ -31,8 +31,6 @@ class Config {
   }
 
   public cloudinaryConfig(): void {
-    // `cloudinary.v2.config` will enable us to set the config and inside it
-    // we provide the configuration
     cloudinary.v2.config({
       // Now because im already inside this class and the properties are set
       // in the constructor, i can just use `this.CLOUD_NAME`
