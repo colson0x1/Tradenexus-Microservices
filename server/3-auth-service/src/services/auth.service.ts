@@ -11,67 +11,79 @@ import { config } from '@auth/config';
 import { AuthModel } from '@auth/models/auth.schema';
 import { publishDirectMessage } from '@auth/queues/auth.producer';
 import { authChannel } from '@auth/server';
-import { firstLetterUppercase, IAuthBuyerMessageDetails, IAuthDocument } from '@colson0x1/tradenexus-shared';
+import { firstLetterUppercase, IAuthBuyerMessageDetails, IAuthDocument, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { sign } from 'jsonwebtoken';
 import { lowerCase, omit } from 'lodash';
 import { Model, Op } from 'sequelize';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService', 'debug');
 
 // `data` of type `IAuthDocument` contains all the properties that we need that
 // we want to save to our database
 export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument> {
-  // create a user and then return a model
-  const result: Model = await AuthModel.create(data);
-  // Inside that `result` model, we're going to get `.dataValues` and that
-  // dataValues will contain our IAuthDocument
-  /* result.dataValues. */
-  // Every user that creates an account will automatically be a buyer.
-  // Construct the message details object that im going to send to the buyer
-  // service.
-  // This `messageDetails` will be used to create new buyer. So here in this
-  // MySQL database, im just going to add the documents or the data for the
-  // user. But then to create the actual buyer, im going to add it to the
-  // MongoDB.
-  // I'll use the type `IAuthBuyerMessageDetails` to create the object in the
-  // MongoDB database.
-  const messageDetails: IAuthBuyerMessageDetails = {
-    // This `dataValues`, we're getting it from the Model. Because the
-    // `create` method returns a Model. It does not return the actual document.
-    // It returns a Model and inside that Model it contains this `dataValue`
-    // that contains the actual document that was added to the database or to
-    // the table.
-    // So that is why im using `result.dataValues`
-    username: result.dataValues.username!,
-    email: result.dataValues.email!,
-    // here using `!` incase its undefined
-    profilePicture: result.dataValues.profilePicture!,
-    country: result.dataValues.country!,
-    createdAt: result.dataValues.createdAt!,
-    // The reasons why im doing this `type: 'auth'` is to check, if type is
-    // equal to 'auth', we know exactly that its coming from the 'auth' service
-    type: 'auth'
-  };
-  // publish the message
-  await publishDirectMessage(
-    // channel
-    authChannel,
-    // exchange name
-    'tradenexus-buyer-update',
-    // routing key
-    'user-buyer',
-    // message
-    JSON.stringify(messageDetails),
-    // log value
-    'Buyer details sent to buyer service'
-  );
-  // We don't want to return the `password`. So the documents that is returned
-  // from `result.dataValues`, we need to omit the `password` field
-  // i.e we dont want to send the password to the frontend
-  // i.e This will return the complete row for that particular user and we
-  // don't want the password to be sent. So here we omit the password and then
-  // return the user data.
-  const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
-  // return user document
-  return userData;
+  try {
+    log.info('Creating new auth user');
+
+    // create a user and then return a model
+    const result: Model = await AuthModel.create(data);
+    log.info('Auth user created successfully');
+
+    // Inside that `result` model, we're going to get `.dataValues` and that
+    // dataValues will contain our IAuthDocument
+    /* result.dataValues. */
+    // Every user that creates an account will automatically be a buyer.
+    // Construct the message details object that im going to send to the buyer
+    // service.
+    // This `messageDetails` will be used to create new buyer. So here in this
+    // MySQL database, im just going to add the documents or the data for the
+    // user. But then to create the actual buyer, im going to add it to the
+    // MongoDB.
+    // I'll use the type `IAuthBuyerMessageDetails` to create the object in the
+    // MongoDB database.
+    const messageDetails: IAuthBuyerMessageDetails = {
+      // This `dataValues`, we're getting it from the Model. Because the
+      // `create` method returns a Model. It does not return the actual document.
+      // It returns a Model and inside that Model it contains this `dataValue`
+      // that contains the actual document that was added to the database or to
+      // the table.
+      // So that is why im using `result.dataValues`
+      username: result.dataValues.username!,
+      email: result.dataValues.email!,
+      // here using `!` incase its undefined
+      profilePicture: result.dataValues.profilePicture!,
+      country: result.dataValues.country!,
+      createdAt: result.dataValues.createdAt!,
+      // The reasons why im doing this `type: 'auth'` is to check, if type is
+      // equal to 'auth', we know exactly that its coming from the 'auth' service
+      type: 'auth'
+    };
+    // publish the message
+    await publishDirectMessage(
+      // channel
+      authChannel,
+      // exchange name
+      'tradenexus-buyer-update',
+      // routing key
+      'user-buyer',
+      // message
+      JSON.stringify(messageDetails),
+      // log value
+      'Buyer details sent to buyer service'
+    );
+    // We don't want to return the `password`. So the documents that is returned
+    // from `result.dataValues`, we need to omit the `password` field
+    // i.e we dont want to send the password to the frontend
+    // i.e This will return the complete row for that particular user and we
+    // don't want the password to be sent. So here we omit the password and then
+    // return the user data.
+    const userData: IAuthDocument = omit(result.dataValues, ['password']) as IAuthDocument;
+    // return user document
+    return userData;
+  } catch (error) {
+    log.error('Error in createAuthUser:', error);
+    throw error;
+  }
 }
 
 // export user by id
@@ -115,25 +127,34 @@ export async function getAuthUserById(authId: number): Promise<IAuthDocument> {
 }
 
 export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument> {
-  // So here what i want to do is, check if theres any document that matches
-  // the username or the email properties. Here since we're not going to send
-  // this data to the fontend, we can remove the `attributes` property
-  const user: Model = (await AuthModel.findOne({
-    where: {
-      // Here we want to get the documents that matches the username  and
-      // email
-      // i.e we're just saying, if we want to check for any document that
-      // matches the username or email. So if theres a docment that matches the
-      // username it will return the document. Likewise, if theres a document
-      // that matches the email, it will reutrn the document. If it doesnt find,
-      // then it will just return empty.
-      [Op.or]: [{ username: firstLetterUppercase(username) }, { email: lowerCase(email) }]
-    }
-  })) as Model;
-  // We need ? on user? is because, if it doesnt find any document and then
-  // we try to get the dataValues on user, it will throw an error because
-  // it is null.
-  return user?.dataValues;
+  try {
+    log.info(`Checking for existing user - username: ${username}, email: ${email}`);
+
+    // So here what i want to do is, check if theres any document that matches
+    // the username or the email properties. Here since we're not going to send
+    // this data to the fontend, we can remove the `attributes` property
+    const user: Model = (await AuthModel.findOne({
+      where: {
+        // Here we want to get the documents that matches the username  and
+        // email
+        // i.e we're just saying, if we want to check for any document that
+        // matches the username or email. So if theres a docment that matches the
+        // username it will return the document. Likewise, if theres a document
+        // that matches the email, it will reutrn the document. If it doesnt find,
+        // then it will just return empty.
+        [Op.or]: [{ username: firstLetterUppercase(username) }, { email: lowerCase(email) }]
+      }
+    })) as Model;
+    // We need ? on user? is because, if it doesnt find any document and then
+    // we try to get the dataValues on user, it will throw an error because
+    // it is null.
+    log.info(user ? 'User found' : 'No user found');
+
+    return user?.dataValues;
+  } catch (error) {
+    log.error('Error in getUserByUsernameOrEmail:', error);
+    throw error;
+  }
 }
 
 // Also implement, get by username and then get by email separately

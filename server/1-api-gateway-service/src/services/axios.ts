@@ -4,6 +4,10 @@
 import axios from 'axios';
 import { sign } from 'jsonwebtoken';
 import { config } from '@gateway/config';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewayAxiosService', 'debug');
 
 // Im not going to create an instance here. Instead, I'll create an instance
 // of the class where I need it. The reason is because, the class constructor
@@ -66,6 +70,7 @@ export class AxiosService {
       // the service name i use, im going to set it to this `id` property and
       // then sign it, add it to the request.
       requestGatewayToken = sign({ id: serviceName }, `${config.GATEWAY_JWT_TOKEN}`);
+      log.info(`Created gateway token for service: ${serviceName}`);
     }
     // @ Add it to the request
     const instance: ReturnType<typeof axios.create> = axios.create({
@@ -85,6 +90,30 @@ export class AxiosService {
       // we need to send, set withCredentials to true
       withCredentials: true
     });
+
+    // Add response interceptor for debugging
+    instance.interceptors.response.use(
+      (response) => {
+        log.info(`Successful response from ${baseUrl}`);
+        return response;
+      },
+      (error) => {
+        log.error(`Error response from ${baseUrl}:`, error.message);
+        return Promise.reject(error);
+      }
+    );
+
+    // Add request interceptor for debugging
+    instance.interceptors.request.use(
+      (config) => {
+        log.info(`Making request to ${config.url}`);
+        return config;
+      },
+      (error) => {
+        log.error('Request error:', error.message);
+        return Promise.reject(error);
+      }
+    );
 
     return instance;
   }
