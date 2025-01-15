@@ -14,5 +14,16 @@ export function appRoutes(app: Application): void {
   // verifyGatewayRequest will check if the request going into the auth route,
   // if its coming from the API gateway, if its not coming from the API gateway,
   // it will reject the request.
+  /* app.use(BASE_PATH, verifyGatewayRequest, authRoutes()); */
+  // @ Log the request headers
+  /*
+  app.use(
+    BASE_PATH,
+    (req: Request) => {
+      console.log(req.headers);
+    },
+    () => console.log('auth')
+  );
+  */
   app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
 }

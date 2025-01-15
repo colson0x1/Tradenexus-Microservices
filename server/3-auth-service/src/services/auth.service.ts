@@ -21,13 +21,13 @@ const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authService',
 
 // `data` of type `IAuthDocument` contains all the properties that we need that
 // we want to save to our database
-export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument> {
+export async function createAuthUser(data: IAuthDocument): Promise<IAuthDocument | undefined> {
   try {
-    log.info('Creating new auth user');
+    /* log.info('Creating new auth user'); */
 
     // create a user and then return a model
     const result: Model = await AuthModel.create(data);
-    log.info('Auth user created successfully');
+    /* log.info('Auth user created successfully'); */
 
     // Inside that `result` model, we're going to get `.dataValues` and that
     // dataValues will contain our IAuthDocument
@@ -110,7 +110,7 @@ export async function getAuthUserById(authId: number): Promise<Model<IAuthDocume
 // OR this way makes more sense!
 // So here, we're returning the actual document i.e `IAuthDocument`, not the
 // `Model` itself
-export async function getAuthUserById(authId: number): Promise<IAuthDocument> {
+export async function getAuthUserById(authId: number): Promise<IAuthDocument | undefined> {
   // To get the user by id, we use the findOne
   const user: Model = (await AuthModel.findOne({
     // we want to find by `id` where id in the database is equal to the authId
@@ -126,9 +126,9 @@ export async function getAuthUserById(authId: number): Promise<IAuthDocument> {
   return user?.dataValues;
 }
 
-export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument> {
+export async function getUserByUsernameOrEmail(username: string, email: string): Promise<IAuthDocument | undefined> {
   try {
-    log.info(`Checking for existing user - username: ${username}, email: ${email}`);
+    /* log.info(`Checking for existing user - username: ${username}, email: ${email}`); */
 
     // So here what i want to do is, check if theres any document that matches
     // the username or the email properties. Here since we're not going to send
@@ -148,18 +148,18 @@ export async function getUserByUsernameOrEmail(username: string, email: string):
     // We need ? on user? is because, if it doesnt find any document and then
     // we try to get the dataValues on user, it will throw an error because
     // it is null.
-    log.info(user ? 'User found' : 'No user found');
+    /* log.info(user ? 'User found' : 'No user found'); */
 
     return user?.dataValues;
   } catch (error) {
     log.error('Error in getUserByUsernameOrEmail:', error);
-    throw error;
+    /* throw error; */
   }
 }
 
 // Also implement, get by username and then get by email separately
 // @ Get by username
-export async function getUserByUsername(username: string): Promise<IAuthDocument> {
+export async function getUserByUsername(username: string): Promise<IAuthDocument | undefined> {
   const user: Model = (await AuthModel.findOne({
     where: { username: firstLetterUppercase(username) }
   })) as Model;
@@ -167,7 +167,7 @@ export async function getUserByUsername(username: string): Promise<IAuthDocument
 }
 
 // @ Get by email
-export async function getUserByEmail(email: string): Promise<IAuthDocument> {
+export async function getUserByEmail(email: string): Promise<IAuthDocument | undefined> {
   const user: Model = (await AuthModel.findOne({
     where: { email: lowerCase(email) }
   })) as Model;
@@ -175,7 +175,7 @@ export async function getUserByEmail(email: string): Promise<IAuthDocument> {
 }
 
 // Will be used to verify the user's email
-export async function getAuthUserByVerificationToken(token: string): Promise<IAuthDocument> {
+export async function getAuthUserByVerificationToken(token: string): Promise<IAuthDocument | undefined> {
   const user: Model = (await AuthModel.findOne({
     // Search where email verification token matches token
     where: { emailVerificationToken: token },
@@ -189,7 +189,7 @@ export async function getAuthUserByVerificationToken(token: string): Promise<IAu
 
 // This will be if the user is already logged in and they want to update their
 // password
-export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDocument> {
+export async function getAuthUserByPasswordToken(token: string): Promise<IAuthDocument | undefined> {
   const user: Model = (await AuthModel.findOne({
     // In this case we're going to use a `&` operator because we want to return
     // a document that matches both the `passwordResetToken` and the
