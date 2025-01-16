@@ -11,6 +11,8 @@ import { Request, Response } from 'express';
 import * as auth from '@auth/services/auth.service';
 import { authMock, authMockRequest, authMockResponse, authUserPayload } from '@auth/controllers/test/mocks/auth.mock';
 import { read } from '@auth/controllers/current-user';
+import { Sequelize } from 'sequelize';
+import { config } from '@auth/config';
 
 // Im not going to call this actual `getAuthUserById()` method from current-user.ts,
 // so im going to mock it and then mock the response
@@ -30,16 +32,42 @@ jest.mock('@elastic/elasticsearch');
 const USERNAME = 'colson';
 const PASSWORD = 'stillhome';
 
+// RESOLVE: Jest Async Error for test (Approach 2)
+// Error -> `Reference Error. You are trying to import the file after the Jest
+// environment has been torn down.`
+// Approach 2
+// i.e create an actual connection but the connection will not access the
+// database.
+// I used approach 2 here since it doesnt affect the database.
+let mockConnection: Sequelize;
+
 describe('CurrentUser', () => {
   // Since we're mocking
-  beforeEach(() => {
+  beforeEach(async () => {
     // Before each test block is executed, we reset all mocks
     jest.resetAllMocks();
+    mockConnection = new Sequelize(config.MYSQL_DB!, {
+      dialect: 'mysql',
+      logging: false,
+      dialectOptions: {
+        multipleStatements: true
+      }
+    });
+    // So that `AuthModel.sync({})` inside auth.schema.ts was trying to create
+    // the table every time we run the test. So here we're telling it to set
+    // the force to true. We drop the table. We delete the table. SO before
+    // every test, delete the table. But its not going to affect the table we
+    // already have in the database.
+    // So before each block, we drop the table.
+    await mockConnection.sync({ force: true });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     // After each test block, clear all mocks
     jest.clearAllMocks();
+    // Close the connection
+    // After each block, we close the connection.
+    await mockConnection.close();
   });
 
   // First method that i want to test is `read` from src/controllers/current-user.ts

@@ -191,4 +191,13 @@ AuthModel.prototype.hashPassword = async function (password: string): Promise<st
 // force. Only use it for testing.
 // Hence, force always deletes the table when there is a server restart
 AuthModel.sync({});
+
+// This AuthModel.sync({}) causes error during testing:
+// Error -> `Reference Error. You are trying to import the file after the Jest
+// environment has been torn down.`
+// This is approach 1. Approach 2 is implemented inside the current-user.test.ts
+/* if (process.env.NODE_ENV !== 'test') {
+  AuthModel.sync({});
+} */
+
 export { AuthModel };
