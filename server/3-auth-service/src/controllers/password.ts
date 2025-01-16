@@ -3,8 +3,14 @@
 
 import crypto from 'crypto';
 
-import { emailSchema, passwordSchema } from '@auth/schemes/password';
-import { getAuthUserByPasswordToken, getUserByEmail, updatePassword, updatePasswordToken } from '@auth/services/auth.service';
+import { changePasswordSchema, emailSchema, passwordSchema } from '@auth/schemes/password';
+import {
+  getAuthUserByPasswordToken,
+  getUserByEmail,
+  getUserByUsername,
+  updatePassword,
+  updatePasswordToken
+} from '@auth/services/auth.service';
 import { BadRequestError, IAuthDocument, IEmailMessageDetails } from '@colson0x1/tradenexus-shared';
 import { Request, Response } from 'express';
 import { config } from '@auth/config';
@@ -107,6 +113,53 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     'auth-email',
     JSON.stringify(messageDetails),
     'Reset password success message sent to notification service.'
+  );
+  res.status(StatusCodes.OK).json({ message: 'Password successfully updated.' });
+}
+
+// This method will be called when user is already logged in
+// The only difference between the `resetPassword` and the `changePassword`
+// is for the `changePassword`, im using current password and the new password.
+// And then instead of getting the user documents by token, im getting the
+// user document by the username and im getting the username from currentUser.
+export async function changePassword(req: Request, res: Response): Promise<void> {
+  // For the validation, We expect current password and the new password
+  const { error } = await Promise.resolve(changePasswordSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Password changePassword() method error');
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (currentPassword !== newPassword) {
+    throw new BadRequestError('Invalid password', 'Password changePassword() method error');
+  }
+
+  // This method changePassword() will be called when the user is already
+  // logged in. So here, using getUserByUsername()
+  // Also, note: as long as the user is logged in, we have this `currentUser`
+  // object and inside of it, we have the id, email, username like that.
+  // So im going to use this currentUser to get the user.
+  const existingUser: IAuthDocument | undefined = await getUserByUsername(`${req.currentUser?.username}`);
+  if (!existingUser) {
+    throw new BadRequestError('Invalid password', 'Password changePassword() method error');
+  }
+  // Hash the password with the `newPassword`
+  const hashedPassword: string = await AuthModel.prototype.hashPassword(newPassword);
+  // Update the database with the new password
+  // To this updatePassword(), we pass in the id and the new hashed password
+  await updatePassword(existingUser.id!, hashedPassword);
+  // Construct email messages detail
+  const messageDetails: IEmailMessageDetails = {
+    username: existingUser.username,
+    template: 'resetPasswordSuccess'
+  };
+  // Publish message to the tradenexus-email-notification exchange
+  await publishDirectMessage(
+    authChannel,
+    'tradenexus-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Password change success message sent to notification service.'
   );
   res.status(StatusCodes.OK).json({ message: 'Password successfully updated.' });
 }
