@@ -1,5 +1,6 @@
 /* @ This will handle all the routes related to authentication service */
 
+import { SignIn } from '@gateway/controllers/auth/signin';
 import { SignUp } from '@gateway/controllers/auth/signup';
 import express, { Router } from 'express';
 
@@ -16,8 +17,12 @@ class AuthRoutes {
     // without creating an instance.
     /* this.router.post('/auth/signup', SignUp.prototype.create); */
 
+    // Using instance
     const signUpController = new SignUp();
     this.router.post('/auth/signup', (req, res) => signUpController.create(req, res));
+
+    // Using Prototype
+    this.router.post('/auth/signin', SignIn.prototype.read);
 
     return this.router;
   }
