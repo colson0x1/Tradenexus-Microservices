@@ -1,4 +1,4 @@
-import { createForgotPassword } from '@auth/controllers/password';
+import { forgotPassword, resetPassword } from '@auth/controllers/password';
 import { read } from '@auth/controllers/signin';
 import { create } from '@auth/controllers/signup';
 import { update } from '@auth/controllers/verify-email';
@@ -10,7 +10,8 @@ export function authRoutes(): Router {
   router.post('/signup', create);
   router.post('/signin', read);
   router.put('/verify-email', update);
-  router.put('/forgot-password', createForgotPassword);
+  router.put('/forgot-password', forgotPassword);
+  router.put('/reset-password/:token', resetPassword);
 
   return router;
 }

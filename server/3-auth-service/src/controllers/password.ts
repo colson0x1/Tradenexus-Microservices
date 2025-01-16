@@ -3,25 +3,26 @@
 
 import crypto from 'crypto';
 
-import { emailSchema } from '@auth/schemes/password';
-import { getUserByEmail, updatePasswordToken } from '@auth/services/auth.service';
+import { emailSchema, passwordSchema } from '@auth/schemes/password';
+import { getAuthUserByPasswordToken, getUserByEmail, updatePassword, updatePasswordToken } from '@auth/services/auth.service';
 import { BadRequestError, IAuthDocument, IEmailMessageDetails } from '@colson0x1/tradenexus-shared';
 import { Request, Response } from 'express';
 import { config } from '@auth/config';
 import { publishDirectMessage } from '@auth/queues/auth.producer';
 import { authChannel } from '@auth/server';
 import { StatusCodes } from 'http-status-codes';
+import { AuthModel } from '@auth/models/auth.schema';
 
 // First, create the method that will send an email to the user when they want
 // to request for the link to update their password
-export async function createForgotPassword(req: Request, res: Response): Promise<void> {
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
   // Validate what we have on our req.body because the data we're going to
   // send, we need to validate them
   // i.e check if the email in the req.body matches what we expect. if not,
   // throw an error. if it does, use the email to get the user document.
   const { error } = await Promise.resolve(emailSchema.validate(req.body));
   if (error?.details) {
-    throw new BadRequestError(error.details[0].message, 'Password create() method error');
+    throw new BadRequestError(error.details[0].message, 'Password forgotPassword() method error');
   }
   const { email } = req.body;
   // Get the user by email
@@ -31,7 +32,7 @@ export async function createForgotPassword(req: Request, res: Response): Promise
     // On the frontend, user will have to type in their email and then send.
     // And then we're going to send an email to that particular address. So
     // first we need to check if it is existing in the database.
-    throw new BadRequestError('Invalid credentials', 'Password create() method error');
+    throw new BadRequestError('Invalid credentials', 'Password forgotPassword() method error');
   }
   // Generate some random characters so that it can be used it as the email
   // verification token
@@ -65,4 +66,47 @@ export async function createForgotPassword(req: Request, res: Response): Promise
     'Forgot password message sent to notification service.'
   );
   res.status(StatusCodes.OK).json({ message: 'Password reset email sent.' });
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  // Validate new password and confirm password
+  const { error } = await Promise.resolve(passwordSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Password resetPassword() method error');
+  }
+
+  const { password, confirmPassword } = req.body;
+  const { token } = req.params;
+  // If passwords are not same, then throw error
+  if (password !== confirmPassword) {
+    throw new BadRequestError('Passwords do not match', 'Password resetPassword() method error');
+  }
+
+  // But if the passwords are the same, then we want to use the token i.e we
+  // want to get the user object by the token
+  const existingUser: IAuthDocument | undefined = await getAuthUserByPasswordToken(token);
+  // If no document is returned, that means the token is invalid
+  if (!existingUser) {
+    throw new BadRequestError('Reset token has expired', 'Password resetPassword() method error');
+  }
+  // Otherwise, hash the password
+  // use hashPassword() to has this new `password`
+  const hashedPassword: string = await AuthModel.prototype.hashPassword(password);
+  // Update the database with the new password
+  // To this updatePassword(), we pass in the id and the new hashed password
+  await updatePassword(existingUser.id!, hashedPassword);
+  // Construct email messages detail
+  const messageDetails: IEmailMessageDetails = {
+    username: existingUser.username,
+    template: 'resetPasswordSuccess'
+  };
+  // Publish message to the tradenexus-email-notification exchange
+  await publishDirectMessage(
+    authChannel,
+    'tradenexus-email-notification',
+    'auth-email',
+    JSON.stringify(messageDetails),
+    'Reset password success message sent to notification service.'
+  );
+  res.status(StatusCodes.OK).json({ message: 'Password successfully updated.' });
 }
