@@ -53,6 +53,12 @@ class AuthService {
     const response: AxiosResponse = await axiosAuthInstance.put('/change-password', { currentPassword, newPassword });
     return response;
   }
+
+  async verifyEmail(token: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await axiosAuthInstance.put('/verify-email', { token });
+    return response;
+  }
+
   // For resendEmail, the user needs to be logged in so `axiosAuthInstance`
   // Im destucturing and defining type here because I dont have a type defined
   async resendEmail(data: { userId: number; email: string }): Promise<AxiosResponse> {
