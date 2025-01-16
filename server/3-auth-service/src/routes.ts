@@ -2,6 +2,7 @@ import { Application } from 'express';
 import { verifyGatewayRequest } from '@colson0x1/tradenexus-shared';
 import { authRoutes } from '@auth/routes/auth';
 import { currentUserRoutes } from '@auth/routes/current-user';
+import { healthRoutes } from '@auth/routes/health';
 
 /* This is where im going to define all the that we're going to have in the
  * Auth Service
@@ -26,6 +27,14 @@ export function appRoutes(app: Application): void {
     () => console.log('auth')
   );
   */
+
+  // NOTE: Health route will NOT come from the API gateway i.e it will not pass
+  // through the api gateway!
+  // For health route, its not going to have BASE_PATH.
+  // i.e http://localhost:4002/auth-health
+  // So its not going to have that BASE_PATH attached to it.
+  // We dont also need to verify request.
+  app.use('', healthRoutes());
   app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
   // I simply separated authRoutes and currentUserRoutes because the authRoutes(),
   // they are mostly not protected routes. So they are requests that the user will

@@ -1,4 +1,5 @@
 import { CurrentUser } from '@gateway/controllers/auth/current-user';
+import { Refresh } from '@gateway/controllers/auth/refresh-token';
 import { authMiddleware } from '@gateway/services/auth-middleware';
 import express, { Router } from 'express';
 
@@ -11,6 +12,7 @@ class CurrentUserRoutes {
 
   public routes(): Router {
     // Using Prototype
+    this.router.get('/auth/refresh-token/:username', authMiddleware.checkAuthentication, Refresh.prototype.token);
     // @ authMiddleware.checkAuthentication checks if currentUser exists. If
     // currentUser object does not exist, it throws an error.
     // authMiddleware.verifyUser is just to verify if the token is still valid.
