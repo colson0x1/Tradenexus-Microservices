@@ -7,13 +7,13 @@
 import { IAuthDocument, IAuthPayload } from '@colson0x1/tradenexus-shared';
 import { Response } from 'express';
 
-// @ authMockRequest method
+// @authMockRequest method
 // When sending a request, we need some object. And in the object, we need
 // session data and we need a body i.e if we're sending a POST request, we
 // usually send data in the req.body. Also we want to set the currentUser
 // and then params i.e req.params.username like that.
 // So im mocking what we usually have in request coming from express.
-export const authRequest = (sessionData: IJWT, body: IAuthMock, currentUser?: IAuthPayload | null, params?: unknown) => ({
+export const authMockRequest = (sessionData: IJWT, body: IAuthMock, currentUser?: IAuthPayload | null, params?: unknown) => ({
   // Here we're mocking what we have inside request object i.e mocking whats
   // inside `req: Request`
   // Inside request object, we have the sesion object property and its going
@@ -24,6 +24,7 @@ export const authRequest = (sessionData: IJWT, body: IAuthMock, currentUser?: IA
   currentUser
 });
 
+// @authMockResponse method
 // What im doing in this fn is just to mock what I actually need. When im
 // sending status code, i use res.status so im mocking it as a jest fn and
 // returning this response object i.e `res`. And then, im doing it same for
