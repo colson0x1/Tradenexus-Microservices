@@ -1,3 +1,4 @@
+import { createForgotPassword } from '@auth/controllers/password';
 import { read } from '@auth/controllers/signin';
 import { create } from '@auth/controllers/signup';
 import { update } from '@auth/controllers/verify-email';
@@ -8,7 +9,8 @@ const router: Router = express.Router();
 export function authRoutes(): Router {
   router.post('/signup', create);
   router.post('/signin', read);
-  router.post('/verify-email', update);
+  router.put('/verify-email', update);
+  router.put('/forgot-password', createForgotPassword);
 
   return router;
 }

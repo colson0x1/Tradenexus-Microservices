@@ -107,7 +107,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 
   // Generate some random characters so that it can be used it as the email
   // verification token
-  // Here im gernerating random buffer of size 20 and convert the buffer into
+  // Here im generating random buffer of size 20 and convert the buffer into
   // hexa decimal string
   const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
   const randomCharacters: string = randomBytes.toString('hex');
