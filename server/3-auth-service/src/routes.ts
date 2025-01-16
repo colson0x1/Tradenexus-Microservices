@@ -1,6 +1,7 @@
 import { Application } from 'express';
 import { verifyGatewayRequest } from '@colson0x1/tradenexus-shared';
 import { authRoutes } from '@auth/routes/auth';
+import { currentUserRoutes } from '@auth/routes/current-user';
 
 /* This is where im going to define all the that we're going to have in the
  * Auth Service
@@ -26,4 +27,11 @@ export function appRoutes(app: Application): void {
   );
   */
   app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
+  // I simply separated authRoutes and currentUserRoutes because the authRoutes(),
+  // they are mostly not protected routes. So they are requests that the user will
+  // make when they are not logged in. And then currentUserRoutes, they are
+  // requests that the user will make when they are logged in. So I decided to
+  // separate them and create two routes. Hence, authRoutes requires users to be
+  // not logged in whereas currentUserRoutes requires users to be logged in!
+  app.use(BASE_PATH, verifyGatewayRequest, currentUserRoutes());
 }
