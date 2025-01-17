@@ -9,8 +9,9 @@
 import { Request, Response } from 'express';
 // Here i want to use it to mock the specific method that i actually need.
 import * as auth from '@auth/services/auth.service';
+import * as helper from '@colson0x1/tradenexus-shared';
 import { authMock, authMockRequest, authMockResponse, authUserPayload } from '@auth/controllers/test/mocks/auth.mock';
-import { read } from '@auth/controllers/current-user';
+import { read, resendEmail } from '@auth/controllers/current-user';
 import { Sequelize } from 'sequelize';
 import { config } from '@auth/config';
 
@@ -139,6 +140,75 @@ describe('CurrentUser', () => {
         // to get an error on test
         user: null
       });
+    });
+  });
+
+  // @ Resend email test
+  // We're going to have three cases. First is, if this method `getUserByEmail()`
+  // doesn't return any value or any object. Second is if it returns an object.
+  // And third is, test if this method i.e `updateVerifyEmailField()` was
+  // actually called when we call `resendEmail()`
+  // @ 1st test case
+  describe('resendEmail method', () => {
+    // I want to test this case if this `getUserByEmail` that is located inside
+    // `resendEmail()` method from current-user.ts, so if this fn does not
+    // return any object, I expect it to call this `BadRequestError()`
+    it('should call BadRequestError for invalid email', async () => {
+      const req: Request = authMockRequest({}, { username: USERNAME, password: PASSWORD }, authUserPayload) as unknown as Request;
+      const res: Response = authMockResponse();
+
+      // Its not going to return an actual object. Its going to return an
+      // empty object.
+      jest.spyOn(auth, 'getUserByEmail').mockResolvedValue({} as never);
+
+      // Now because we want to check for error case, we can pass this inside
+      // a catch block. resendEmail fn is a promise. so we have access to
+      // .then() and .catch().
+      resendEmail(req, res).catch(() => {
+        // I want to expecr or check that BadRequestError was called with this
+        // properties i.e from resendEmail() inside curren-user.ts
+        // `BadRequestError('Email is invalid', 'CurrentUser resentEmail() method error')`
+        // So if there's an error, if this `getAuthUserById()` doesn't return
+        // an object, then we expect BadRequestError to have been called with
+        // this properties listed.
+        expect(helper.BadRequestError).toHaveBeenCalledWith('Email is invalid', 'CurrentUser resentEmail() method error');
+      });
+    });
+
+    // @ 2nd test case
+    // The second test case is we want to make sure that this `updateVerifyEmailField()`
+    // was called.
+    it('should call updateVerifyEmailField method', async () => {
+      const req: Request = authMockRequest({}, { username: USERNAME, password: PASSWORD }, authUserPayload) as unknown as Request;
+      const res: Response = authMockResponse();
+
+      jest.spyOn(auth, 'getUserByEmail').mockResolvedValue(authMock);
+
+      await resendEmail(req, res);
+
+      // We expect that at least this `updateVerifyEmailField` method was called
+      expect(auth.updateVerifyEmailField).toHaveBeenCalled();
+    });
+
+    // @ 3rd test case
+    // It should call the `getAuthUserById()` i.e
+    // `const updatedUser = await getAuthUserById(parse(userId));`
+    // and then also the json respon should have this properties i.e
+    // `res.status(StatusCodes.OK).json({ message: 'Email verification sent', user: updatedUser })`
+    // i.e { message: 'Email verification sent', user: updatedUser }
+    it('should return authenticated user', async () => {
+      const req: Request = authMockRequest({}, { username: USERNAME, password: PASSWORD }, authUserPayload) as unknown as Request;
+      const res: Response = authMockResponse();
+
+      jest.spyOn(auth, 'getUserByEmail').mockResolvedValue(authMock);
+      jest.spyOn(auth, 'getAuthUserById').mockResolvedValue(authMock);
+      await resendEmail(req, res);
+
+      expect(auth.updateVerifyEmailField).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      // Here user should be whatever this `getAuthUserById` returns above
+      // which is authMock i.e jest.spyOn(auth, 'getAuthUserById').mockResolvedValue(authMock);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Email verification sent', user: authMock });
     });
   });
 });

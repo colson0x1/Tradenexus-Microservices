@@ -75,5 +75,5 @@ export async function resendEmail(req: Request, res: Response): Promise<void> {
   // integer.
   const updatedUser = await getAuthUserById(parseInt(userId));
 
-  res.status(StatusCodes.CREATED).json({ message: 'Email verification sent', user: updatedUser });
+  res.status(StatusCodes.OK).json({ message: 'Email verification sent', user: updatedUser });
 }
