@@ -7,13 +7,13 @@ import { ClusterHealthResponse } from '@elastic/elasticsearch/lib/api/types';
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authElasticSearchServer', 'debug');
 
 // This will be used outside of this file in this service.
-export const elasticSearchClient = new Client({
+const elasticSearchClient = new Client({
   node: `${config.ELASTIC_SEARCH_URL}`
 });
 
 // `checkConnection` will be used to check the health status of our
 // Elasticsearch Node because we're running a single Node Cluster.
-export async function checkConnection(): Promise<void> {
+async function checkConnection(): Promise<void> {
   let isConnected = false;
   while (!isConnected) {
     log.info('AuthService connecting to ElasticSearch...');
@@ -36,3 +36,35 @@ export async function checkConnection(): Promise<void> {
     }
   }
 }
+
+// Method to check if an index exists or not. Elasticsearch will throw an
+// error if index already exists
+async function checkIfIndexExist(indexName: string): Promise<boolean> {
+  const result: boolean = await elasticSearchClient.indices.exists({ index: indexName });
+  return result;
+}
+
+// Method to create an actual index
+async function createIndex(indexName: string): Promise<void> {
+  try {
+    const result: boolean = await checkIfIndexExist(indexName);
+    if (result) {
+      log.info(`Index "${indexName}" already exist.`);
+    } else {
+      // Create the index
+      await elasticSearchClient.indices.create({ index: indexName });
+      // What this .refresh() does is, just to allow once it is created i.e
+      // once index is created and then any document that is added, that
+      // document should be available for search.
+      // So once this index is created, we just call the .refresh() and then
+      // any document that is added to the index will be available for search.
+      await elasticSearchClient.indices.refresh({ index: indexName });
+      log.info(`Created index ${indexName}`);
+    }
+  } catch (error) {
+    log.error(`An error occurred while creating the index ${indexName}`);
+    log.log('error', 'AuthService createIndex() method:', error);
+  }
+}
+
+export { elasticSearchClient, checkConnection, createIndex };

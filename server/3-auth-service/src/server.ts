@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { verify } from 'jsonwebtoken';
 import compression from 'compression';
-import { checkConnection } from '@auth/elasticsearch';
+import { checkConnection, createIndex } from '@auth/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@auth/routes';
 import { Channel } from 'amqplib';
@@ -122,6 +122,14 @@ async function startQueues(): Promise<void> {
 
 function startElasticSearch(): void {
   checkConnection();
+  // The name of the index is going to be called gigs because im going to be
+  // saving every gig that a seller will create. Im going to save it in the
+  // gigs index on Elasticsearch.
+  // Im only going to be using Elasticsearch with gigs. Later i might expand
+  // like maybe I can add features for sellers. Maybe I can save the sellers
+  // on Elasticsearch as well.
+  // But at present, im only going to be adding gigs to Elasticsearch.
+  createIndex('gigs');
 }
 
 function authErrorHandler(app: Application): void {
