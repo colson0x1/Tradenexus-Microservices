@@ -311,7 +311,7 @@ services:
       - SECRET_KEY_ONE=580af2ec4469679258771e8a7ff58cbec152b69dfbb66040a0904688ebc520ec
       - SECRET_KEY_TWO=933861b15c6dfe53cef4abeb77b42fdb933900d43c74ac95f9dec7cd743f3a01
       - CLIENT_URL=http://localhost:3000
-      - AUTH_BASE_URL=http://localhost:4002
+      - AUTH_BASE_URL=http://auth_container:4002
       - USERS_BASE_URL=http://localhost:4003
       - GIG_BASE_URL=http://localhost:4004
       - MESSAGE_BASE_URL=http://localhost:4005
@@ -364,14 +364,14 @@ services:
       - GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e
       - JWT_TOKEN=60c60e1f014355049c2493d8d24aacd5e81e7fde4c4e0e3e349f3fe7c8b7fed3
       - NODE_ENV=development
-      - API_GATEWAY_URL=http://localhost:4000
+      - API_GATEWAY_URL=http://gateway_container:4000
       - CLIENT_URL=http://localhost:3000
       - RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
       - MYSQL_DB=mysql://colson:stillhome@localhost:3306/tradenexus_auth
       - CLOUD_NAME=colson0x1
       - CLOUD_API_KEY=211615812663681
       - CLOUD_API_SECRET=RrHVkR9yD8bQpwKMUQE9FXmSlSk
-      - ELASTIC_SEARCH_URL=http://localhost:9200
+      - ELASTIC_SEARCH_URL=http://elasticsearch_container:9200
       - ELASTIC_APM_SERVER_URL=http://localhost:8200
       - ELASTIC_APM_SECRET_TOKEN=
     depends_on:
