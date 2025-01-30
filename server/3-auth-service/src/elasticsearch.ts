@@ -2,7 +2,7 @@ import { Client } from '@elastic/elasticsearch';
 import { config } from '@auth/config';
 import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
-import { ClusterHealthResponse } from '@elastic/elasticsearch/lib/api/types';
+import { ClusterHealthResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'authElasticSearchServer', 'debug');
 
@@ -67,4 +67,49 @@ async function createIndex(indexName: string): Promise<void> {
   }
 }
 
-export { elasticSearchClient, checkConnection, createIndex };
+// Method to get a particular gig by its id
+// gigId === indexId
+// Here, im addressing with gigId
+/* @ Kibana Dev Tools
+# Get data from index
+# Index name: logs-2025.01.17
+# `_search` command is used to return all the documents we've inside this particular index.
+# GET logs-2025.01.17/_search
+
+# GET gigs/_search
+
+# Add test documents to gigs
+POST gigs/_create/1
+{
+  "name": "Stillie",
+  "message": "Wsp"
+}
+
+# Get all gigs
+GET gigs/_search
+*/
+// TODO: Once I setup the methods to add the actual gigs that i expect it to
+// have, then update the return type of this method
+async function getDocumentById(index: string, gigId: string) {
+  try {
+    // Here, we need `_source` because its going to return only one document.
+    // Its not returning a list. If its returning a list, its going to be inside
+    // `hits` array. But we want to return only one document and the document
+    // will have this key called `_source`
+    const result: GetResponse = await elasticSearchClient.get({
+      index,
+      id: gigId
+    });
+
+    // Once we get the response i.e result, the data that we want is going to
+    // be inside `_source` property
+    // Now we have access to different properties on `result.`
+    return result._source;
+  } catch (error) {
+    log.error('error', 'AuthService elasticsearch getDocumentById() method error:', error);
+    // If there's an error, return an empty string
+    return {};
+  }
+}
+
+export { elasticSearchClient, checkConnection, createIndex, getDocumentById };
