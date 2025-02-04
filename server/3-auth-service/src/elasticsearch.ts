@@ -1,6 +1,6 @@
 import { Client } from '@elastic/elasticsearch';
 import { config } from '@auth/config';
-import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { ISellerGig, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { ClusterHealthResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
 
@@ -90,7 +90,7 @@ GET gigs/_search
 */
 // TODO: Once I setup the methods to add the actual gigs that i expect it to
 // have, then update the return type of this method
-async function getDocumentById(index: string, gigId: string) {
+async function getDocumentById(index: string, gigId: string): Promise<ISellerGig> {
   try {
     // Here, we need `_source` because its going to return only one document.
     // Its not returning a list. If its returning a list, its going to be inside
@@ -104,11 +104,15 @@ async function getDocumentById(index: string, gigId: string) {
     // Once we get the response i.e result, the data that we want is going to
     // be inside `_source` property
     // Now we have access to different properties on `result.`
-    return result._source;
+    // Here, since the return type of this `getDocumenyById` fn is `ISellerGig`
+    // So casting the return type to tell TS that it returns with interface of
+    // type `ISellerGig`
+    // So when we get the document, we expect it to be of type `ISellerGig`
+    return result._source as ISellerGig;
   } catch (error) {
     log.error('error', 'AuthService elasticsearch getDocumentById() method error:', error);
     // If there's an error, return an empty string
-    return {};
+    return {} as ISellerGig;
   }
 }
 
