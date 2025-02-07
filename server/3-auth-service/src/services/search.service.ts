@@ -1,5 +1,5 @@
 import { elasticSearchClient, getDocumentById } from '@auth/elasticsearch';
-import { IPaginateProps, IQueryList, ISearchResult, ISellerGig } from '@colson0x1/tradenexus-shared';
+import { IHitsTotal, IPaginateProps, IQueryList, ISearchResult, ISellerGig } from '@colson0x1/tradenexus-shared';
 import { SearchResponse } from '@elastic/elasticsearch/lib/api/types';
 import { parseInt } from 'lodash';
 
@@ -184,6 +184,35 @@ export async function gigsSearch(
     // `from` property
     ...(from !== '0' && { search_after: [from] })
   });
+
+  // Return the search result
+  // If we search in Elasticsearch Dev Tools, we're get objects where we've
+  // `hits` and inside the `hits`, we've another `hits` property which is
+  // an array of objects!
+  // Here im going to return the total heat and the total number of items
+  // i.e i want to return `hits` array and then return the total value located
+  // inside the `hits` object
+  /* @ Here is the data structure of the returned response:
+  {
+   "hits": {
+     "total": {
+       "value": 30,
+       "relation": "eq"
+     },
+     "max_score": 1,
+     "hits": [
+      {},
+      {},
+      {}
+     ]
+   }
+  }
+  */
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
 }
 
 /* @ Elasticsearch Dev Tools
