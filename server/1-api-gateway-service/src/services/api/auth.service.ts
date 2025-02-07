@@ -95,6 +95,16 @@ class AuthService {
     return response;
   }
 
+  /* Example of how this requests/endopints will look like from the frontend:
+   * At first, when the user types into the searchbox, we're going to have
+   * only this kind of query i.e `query` equals to whatever the user types in.
+   * `/auth/search/gig/0/10/forward?query=programming`
+   * And then when the user wants to filter by delivery time, im going to
+   * append this delivery time. And then when the user wants to filter by
+   * minimum and maximum price, then im going to append those associated
+   * params as well. So this is how its going to look:
+   * `/auth/search/gig/0/10/forward?query=programming&delivery_time=3&minPrice=5&maxPrice=20`
+   * */
   async getGigs(query: string, from: string, size: string, type: string): Promise<AxiosResponse> {
     const response: AxiosResponse = await this.axiosService.axios.get(`/search/gig/${from}/${size}/${type}?${query}`);
     return response;

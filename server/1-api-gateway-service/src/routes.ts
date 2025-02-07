@@ -3,6 +3,7 @@ import { healthRoutes } from '@gateway/routes/health';
 import { authRoutes } from '@gateway/routes/auth';
 import { currentUserRoutes } from '@gateway/routes/current-user';
 import { authMiddleware } from '@gateway/services/auth-middleware';
+import { searchRoutes } from '@gateway/routes/search';
 
 const BASE_PATH = '/api/gateway/v1';
 
@@ -14,6 +15,7 @@ export const appRoutes = (app: Application) => {
   // gateway, we attach if it needs to, it will attach the require JWT token if
   // it exists and then sends the request to the authentication service.
   app.use(BASE_PATH, authRoutes.routes());
+  app.use(BASE_PATH, searchRoutes.routes());
 
   // authMiddleware.verify is just used to verify the token. So for every route
   // that will be required, although we require user to already be logged in
