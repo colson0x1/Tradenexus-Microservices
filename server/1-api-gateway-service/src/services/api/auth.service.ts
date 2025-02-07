@@ -116,8 +116,8 @@ class AuthService {
   }
 
   // count is the number of items we want to create
-  async seed(count: number): Promise<AxiosResponse> {
-    const response: AxiosResponse = await this.axiosService.axios.get(`/seed/${count}`);
+  async seed(count: string): Promise<AxiosResponse> {
+    const response: AxiosResponse = await this.axiosService.axios.put(`/seed/${count}`);
     return response;
   }
 }

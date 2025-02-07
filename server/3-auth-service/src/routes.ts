@@ -4,6 +4,7 @@ import { authRoutes } from '@auth/routes/auth';
 import { currentUserRoutes } from '@auth/routes/current-user';
 import { healthRoutes } from '@auth/routes/health';
 import { searchRoutes } from '@auth/routes/search';
+import { seedRoutes } from '@auth/routes/seed';
 
 /* This is where im going to define all the that we're going to have in the
  * Auth Service
@@ -38,6 +39,7 @@ export function appRoutes(app: Application): void {
   app.use('', healthRoutes());
   // For search, we dont need to verify gateway request
   app.use(BASE_PATH, searchRoutes());
+  app.use(BASE_PATH, seedRoutes());
 
   app.use(BASE_PATH, verifyGatewayRequest, authRoutes());
   // I simply separated authRoutes and currentUserRoutes because the authRoutes(),
