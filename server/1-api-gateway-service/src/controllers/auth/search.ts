@@ -19,6 +19,8 @@ export class Search {
   public async gigs(req: Request, res: Response): Promise<void> {
     // Construct queries that we want to send
     const { from, size, type } = req.params;
+    // See query before i construct them using object.forEach
+    console.log('Query before:', req.query);
     // Construct a query to send to the Auth Service
     let query = '';
     // We're going to get our data from `req.query` but we need to convert it
@@ -36,8 +38,14 @@ export class Search {
       // Its going to come from the frontend in a different format and then
       // here, im reconstructing it to the format so that we can send it to
       // the Auth Service.
+      // Also, the reason why im constructing it this way is because the
+      // `req.query` reuturns all the query params in an object but i don't
+      // want to send it to the auth service as an object. So that is why i
+      // constructed it this way.
       query += `${key}=${value}${index !== lastItemIndex ? '&' : ''}`;
     });
+    // See it after the query has been constructed
+    console.log('Query after:', query);
     const response: AxiosResponse = await authService.getGigs(`${query}`, from, size, type);
     res.status(StatusCodes.OK).json({ message: response.data.message, total: response.data.total, gigs: response.data.gigs });
   }

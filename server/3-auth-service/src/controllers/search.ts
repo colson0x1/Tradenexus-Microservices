@@ -47,9 +47,10 @@ export async function gigs(req: Request, res: Response): Promise<void> {
     // sort by the `sortId`, then its going to return 5, 4, 3, 2, 1 just like
     // that.
     resultHits = sortBy(resultHits, ['sortId']);
-    // So once all of those above operations are performed,send this results
-    res.status(StatusCodes.OK).json({ message: 'Search gigs results', total: gigs.total, gigs: resultHits });
   }
+
+  // So once all of those above operations are performed,send this results
+  res.status(StatusCodes.OK).json({ message: 'Search gigs results', total: gigs.total, gigs: resultHits });
 }
 
 // Function to get just the information for one single gig.

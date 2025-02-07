@@ -54,7 +54,8 @@ export async function gigsSearch(
     {
       query_string: {
         fields: ['username', 'title', 'description', 'basicDescription', 'basicTitle', 'categories', 'subCategories', 'tags'],
-        query: 'Beauty'
+        // query: 'Beauty'
+        query: `*${searchQuery}*`
       }
     },
     // Add another query to only return gigs in the search that are active
