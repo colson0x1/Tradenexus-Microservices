@@ -13,6 +13,7 @@ import { config } from '@gateway/config';
 import { elasticSearch } from '@gateway/elasticsearch';
 import { appRoutes } from '@gateway/routes';
 import { axiosAuthInstance } from '@gateway/services/api/auth.service';
+import { axiosBuyerInstance } from '@gateway/services/api/buyer.service';
 
 const SERVER_PORT = 4000;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
@@ -134,6 +135,7 @@ export class GatewayServer {
         // So here we're adding bearer token to the authorization header
         // for auth axios instance
         axiosAuthInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        axiosBuyerInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
       }
       next();
     });
