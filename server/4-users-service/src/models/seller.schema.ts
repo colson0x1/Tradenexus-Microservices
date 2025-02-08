@@ -40,11 +40,11 @@ const sellerSchema: Schema = new Schema(
     profilePublicId: { type: String, required: true },
     // This description is going to be one liner i.e its just going to be a
     // brief information about themselves.
-    // Im setting oneline to default of empty string instead of required true
+    // Im setting oneliner to default of empty string instead of required true
     // because if required is set to true, when the user creates an account,
     // probably they might not maybe want to add a one liner at first. So i can
     // just leave this as en empty string as default value.
-    oneline: { type: String, default: '' },
+    oneliner: { type: String, default: '' },
     country: { type: String, required: true },
     // User can add languages that he/she speaks
     languages: [
@@ -69,7 +69,12 @@ const sellerSchema: Schema = new Schema(
     // So if a buyer rates the user's gig or the user, then im going to add
     // the number. So if its a five star rating, then im going to add 5 because
     // the default is 0.
+    // i.e this ratingsCount will just be the number how many ratings the
+    // user i.e the seller in this case, has obtrained.
     ratingsCount: { type: Number, default: 0 },
+    // ratingSum is the sum of the rating values that all will be added right
+    // here.
+    ratingSum: { type: Number, default: 0 },
     // This ratingCategories, im going to add the different level like 5 4 3 2 1.
     // Because im going to use this to display on the seller's profile. Im going
     // to display how many number of five stars they have. How many number of
