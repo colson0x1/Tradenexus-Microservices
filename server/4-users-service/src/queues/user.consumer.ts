@@ -9,6 +9,12 @@ import { Logger } from 'winston';
 import { Channel, ConsumeMessage, Replies } from 'amqplib';
 import { createConnection } from '@users/queues/connection';
 import { createBuyer, updateBuyerPurchasedGigsProp } from '@users/services/buyer.service';
+import {
+  updateSellerCancelledJobsProp,
+  updateSellerCompletedJobsProp,
+  updateSellerOngoingJobsProp,
+  updateTotalGigsCount
+} from '@users/services/seller.service';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'usersServiceConsumer', 'debug');
 
@@ -74,13 +80,86 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
         const { buyerId, purchasedGigs } = JSON.parse(msg!.content.toString());
         await updateBuyerPurchasedGigsProp(buyerId, purchasedGigs, type);
       }
+      channel.ack(msg!);
+    });
+  } catch (error) {
+    log.log('error', 'UsersService UserConsumer consumeBuyerDirectMessage() method error:', error);
+  }
+};
+// Once i call this consume message in server, then if we create a new user
+// from the Auth service, it will always create the buyer.
+
+/* @ consumeSellerDirectMessage */
+// This method will listen for messages from the Order Service. And the
+// messages will be used to create, approve or delete orders inside the user's
+// document or the seller's document. So the messages will come from Order service.
+const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
+  // This fn will from Orders Service
+  try {
+    if (!channel) {
+      channel = (await createConnection()) as Channel;
+    }
+    const exchangeName = 'tradenexus-seller-udpate';
+    const routingKey = 'user-seller';
+    const queueName = 'user-seller-queue';
+    await channel.assertExchange(exchangeName, 'direct');
+    const tradenexusQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
+    await channel.bindQueue(tradenexusQueue.queue, exchangeName, routingKey);
+    // consume the message
+    channel.consume(tradenexusQueue.queue, async (msg: ConsumeMessage | null) => {
+      // These destructured properties are the properties that will be sent
+      // from the Orders Service
+      const { type, sellerId, ongoingJobs, completedJobs, totalEarnings, recentDelivery, gigSellerId, count } = JSON.parse(
+        msg!.content.toString()
+      );
+      // So if the message comes from the Orders Service where the user is
+      // creating an order
+      // Because when the seller creates an order i.e pays for a particular gig,
+      // and then there's a button that will be used to start the order. So
+      // once they click that button, its going to create the order in the
+      // Order service and send it to the Order database. And then, i want to
+      // publish a message from the Order Service. And its going to have this
+      // type called `create-order`
+      // So once i have this type `create-order`, what i need to do is to just
+      // update the ongoing jobs i.e i want to call this particular funtion
+      // `updateSellerOngoingJobsProp` located at `users/src/services/seller.service.ts`
+      // because I need to update this `ongoingJobs` property located at
+      // `users/src/models/seller.schema.ts`
+      if (type === 'create-order') {
+        // So if type is equal to `create-order`, i want to update `ongoingJobs`
+        // property.
+        // That means, if the user has started working on a particular order,
+        // then i want to update/increment the `ongoingJobs` property by `1`.
+        await updateSellerOngoingJobsProp(sellerId, ongoingJobs);
+      } else if (type === 'approve-order') {
+        // if type is equal to `approve-order`, i want to update `completedJobs`
+        // field located inside `users/src/models/seller.schema.ts`
+        // The method thats going to use of that seller.schema.ts is
+        // `updateSellerCompletedJobsProps` located inside `users/src/services/seller.service.ts`
+        // and it takes data which is an object of type `IOrderMessage`
+        await updateSellerCompletedJobsProp({
+          sellerId,
+          ongoingJobs,
+          completedJobs,
+          totalEarnings,
+          recentDelivery
+        });
+      } else if (type === 'update-gig-count') {
+        // So i want to update `totalGigs` field so if a seller creates a gig
+        // for the first time, i want to update this `totalGigs`  property.
+        // So i increment it by `1`.
+        await updateTotalGigsCount(`${gigSellerId}`, count);
+      } else if (type === 'cancel-order') {
+        // So if a seller cancels an order, i want to decrement this by 1.
+        // So i want to reduce the number of ongoing gigs. So i reduce this
+        // value.
+        await updateSellerCancelledJobsProp(sellerId);
+      }
+      channel.ack(msg!);
     });
   } catch (error) {
     log.log('error', 'UsersService UserConsumer consumeBuyerDirectMessage() method error:', error);
   }
 };
 
-// Once i call this consume message in server, then if we create a new user
-// from the Auth service, it will always create the buyer.
-
-export { consumeBuyerDirectMessage };
+export { consumeBuyerDirectMessage, consumeSellerDirectMessage };

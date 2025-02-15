@@ -134,6 +134,13 @@ const updateSellerOngoingJobsProp = async (sellerId: string, ongoingJobs: number
   await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs } }).exec();
 };
 
+const updateSellerCancelledJobsProp = async (sellerId: string): Promise<void> => {
+  // For cancelled jobs, i need to increment `cancelledJobs` property by 1 and
+  // decrement the `ongoingJobs` by 1
+  // `users/src/models/seller.schema.ts`
+  await SellerModel.updateOne({ _id: sellerId }, { $inc: { ongoingJobs: -1, cancelledJobs: 1 } }).exec();
+};
+
 // So when a seller completes a job, increment
 // So this is going to come from the Order service. So once the order is
 // completed, im going to send this `data` object.
@@ -236,5 +243,6 @@ export {
   updateTotalGigsCount,
   updateSellerOngoingJobsProp,
   updateSellerCompletedJobsProp,
-  updateSellerReview
+  updateSellerReview,
+  updateSellerCancelledJobsProp
 };
