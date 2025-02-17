@@ -20,6 +20,35 @@ const buyerSchema: Schema = new Schema(
     // I dont need to index `profilePicture`. Because im not going to search
     // for buyer documents using profile picture. So this is not going to be
     // indexed.
+    /* @ Make a username and email changable later */
+    // NOTE!: the `username` and `email` as in buyer.schema.ts and seller.schema.ts,
+    // so once the user is created, username and email cannot be changed i.e
+    // they will not be able to update them.
+    // The current approach im using there i.e
+    // {
+    //  username: { type: String, required: true, index: true }
+    //  emial: { type: String, required: true, index: true }
+    // }
+    // That approach doesnt make sense if, users can have the option of
+    // updating or changing their usernames or emails.
+    // So that approach won't make sense because, if they use it multiple
+    // times right there in the schema, it will probably like be challenged
+    // if they update their username or update their emails and the different
+    // collections, we have to look for where they were updated in different
+    // collections and then update it. So it doesn't make sense that way.
+    // Approach!
+    // So if we plan on creating an application whereby the username can be
+    // updated later once they are created or the email, then above approach
+    // will not be good. What we can do is, we create a separate collection.
+    // And then we reference the `username` and the `email` in whereever,
+    // whatever collection we need to use them. So for example, we can create
+    // a separate collections to add usernames and email. And then there i.e
+    // in buyer.schema.ts and seller.schema.ts, we just reference the
+    // username and the email. So if we update the collection, it will reflect
+    // in all the other collections or documents where the username and the
+    // emails are used.
+    // So the reason why I added like that is because users will not be able
+    // to update their username and email.
     profilePicture: { type: String, required: true },
     country: { type: String, required: true },
     // By default, this `isSeller` property for every document that is created

@@ -2,6 +2,7 @@ import { verifyGatewayRequest } from '@colson0x1/tradenexus-shared';
 import { Application } from 'express';
 import { buyerRoutes } from '@users/routes/buyer';
 import { healthRoutes } from '@users/routes/health';
+import { sellerRoutes } from '@users/routes/seller';
 
 // This will be the path that will be coming from the API gateway to the
 // Users service
@@ -15,7 +16,8 @@ const appRoutes = (app: Application): void => {
   // Verify gateway request for buyer and seller
   /* app.use(BUYER_BASE_PATH, verifyGatewayRequest, () => console.log('buyer routes')); */
   app.use(BUYER_BASE_PATH, verifyGatewayRequest, () => buyerRoutes);
-  app.use(SELLER_BASE_PATH, verifyGatewayRequest, () => console.log('seller routes'));
+  /* app.use(SELLER_BASE_PATH, verifyGatewayRequest, () => console.log('seller routes')); */
+  app.use(SELLER_BASE_PATH, verifyGatewayRequest, () => sellerRoutes);
 };
 
 export { appRoutes };
