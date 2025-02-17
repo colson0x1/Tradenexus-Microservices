@@ -30,7 +30,7 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
       channel = (await createConnection()) as Channel;
     }
     // Set exchange name
-    const exchangeName = 'tradenexus-buyer-udpate';
+    const exchangeName = 'tradenexus-buyer-update';
     // routingKey should be the same as in publisher
     const routingKey = 'user-buyer';
     // Create a name for the queue to indentify the queue
@@ -78,6 +78,7 @@ const consumeBuyerDirectMessage = async (channel: Channel): Promise<void> => {
           createdAt
         };
         // create the buyer
+        /* console.log('USERS Service - queues/user.consumer.ts - ConsumeBuyerDirectMessage()'); */
         await createBuyer(buyer);
       } else {
         // Update the buyer document

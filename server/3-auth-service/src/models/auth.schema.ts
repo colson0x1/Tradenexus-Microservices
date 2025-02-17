@@ -190,7 +190,9 @@ AuthModel.prototype.hashPassword = async function (password: string): Promise<st
 // it will always drop the table and then create a new table. So don't use
 // force. Only use it for testing.
 // Hence, force always deletes the table when there is a server restart
-AuthModel.sync({});
+AuthModel.sync();
+// So, to clear all the data in MySQL database i.e DROP the table
+/* AuthModel.sync({ force: true }); */
 
 // This AuthModel.sync({}) causes error during testing:
 // Error -> `Reference Error. You are trying to import the file after the Jest

@@ -6,7 +6,7 @@ import { getRandomBuyers } from '@users/services/buyer.service';
 import { createSeller, getSellerByEmail } from '@users/services/seller.service';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { floor, parseInt, random, sampleSize } from 'lodash';
+import { floor, parseInt, random, sample, sampleSize } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 
 // Actual Sellers/Seed method
@@ -65,10 +65,10 @@ const seed = async (req: Request, res: Response): Promise<void> => {
       // first argument to sampleSize is the array and second argument is
       // how many. here im also doing the how many using sampleSize to randomly
       // select from skills array
-      // sampleSize([1, 4]) will create a number between 1 and 4. And then here,
+      // sample([1, 4]) will create a number between 1 and 4. And then here,
       // that is going to be the number of skills that wil be selected from this
       // skills array.
-      skills: sampleSize(skills, sampleSize([1, 4])),
+      skills: sampleSize(skills, sample([1, 4])),
       // harcoding languages meaning this is going to be the same for every
       // user. If we want, we can create a list so that it randomly selects from
       // it. we can use the sampleSize, we can create a list just like how i
