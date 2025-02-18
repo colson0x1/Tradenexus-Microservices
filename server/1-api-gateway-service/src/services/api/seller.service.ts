@@ -7,7 +7,7 @@ export let axiosSellerInstance: ReturnType<typeof axios.create>;
 
 class SellerService {
   constructor() {
-    const axiosService: AxiosService = new AxiosService(`${config.USERS_BASE_URL}/api/v1/seller`, 'buyer');
+    const axiosService: AxiosService = new AxiosService(`${config.USERS_BASE_URL}/api/v1/seller`, 'seller');
     axiosSellerInstance = axiosService.axios;
   }
 

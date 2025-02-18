@@ -30,16 +30,14 @@ const getSellerById = async (sellerId: string): Promise<ISellerDocument | null> 
 
 const getSellerByUsername = async (username: string): Promise<ISellerDocument | null> => {
   // Get the seller
-  // Find document where `_id` matches `username`.
   // Here we don't need to case so im just passing in `username`
-  const seller: ISellerDocument | null = (await SellerModel.findOne({ _id: username }).exec()) as ISellerDocument;
+  const seller: ISellerDocument | null = (await SellerModel.findOne({ username }).exec()) as ISellerDocument;
   return seller;
 };
 
 const getSellerByEmail = async (email: string): Promise<ISellerDocument | null> => {
   // Get the seller
-  // Find document where `_id` matches `email`.
-  const seller: ISellerDocument | null = (await SellerModel.findOne({ _id: email }).exec()) as ISellerDocument;
+  const seller: ISellerDocument | null = (await SellerModel.findOne({ email }).exec()) as ISellerDocument;
   return seller;
 };
 
