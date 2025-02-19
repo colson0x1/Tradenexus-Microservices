@@ -1,0 +1,17 @@
+ENABLE_APM=0
+DATABASE_URL=mongodb://127.0.0.1:27017/tradenexus-gig
+# This gateway token will contain the ids (i.e tokens from gateway-middleware
+# from shared lib) that will be used for validation or authentication
+GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e
+# This is going to be the token that will allow request from the client
+JWT_TOKEN=60c60e1f014355049c2493d8d24aacd5e81e7fde4c4e0e3e349f3fe7c8b7fed3
+NODE_ENV=development
+API_GATEWAY_URL=http://localhost:4000
+RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
+CLOUD_NAME=colson0x1
+CLOUD_API_KEY=211615812663681
+CLOUD_API_SECRET=RrHVkR9yD8bQpwKMUQE9FXmSlSk
+REDIS_HOST=redis://localhost:6379
+ELASTIC_SEARCH_URL=http://localhost:9200
+ELASTIC_APM_SERVER_URL=http://localhost:8200
+ELASTIC_APM_SECRET_TOKEN=
