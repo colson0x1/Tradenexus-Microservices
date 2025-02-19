@@ -26,14 +26,18 @@ const checkConnection = async (): Promise<void> => {
   }
 };
 
-// Method to check if an index exists or not. Elasticsearch will throw an
+/* @ Methods to perform operations on documents inside an index i.e methods to
+ * perform the CRUD operations on documents inside the Elasticsearch Index.
+ * */
+
+// @ Method to check if an index exists or not. Elasticsearch will throw an
 // error if index already exists
 async function checkIfIndexExist(indexName: string): Promise<boolean> {
   const result: boolean = await elasticSearchClient.indices.exists({ index: indexName });
   return result;
 }
 
-// Method to create an actual index
+// @ Method to create an actual index
 async function createIndex(indexName: string): Promise<void> {
   try {
     const result: boolean = await checkIfIndexExist(indexName);
@@ -59,7 +63,7 @@ async function createIndex(indexName: string): Promise<void> {
   }
 }
 
-// Method to get a document from the index
+// @ Method to get a document from the index
 // This method getIndexedData is going to return a promise of type `ISellerGig`
 // because documents that im going to add will be of type `ISellerGig`.
 const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig> => {
@@ -75,6 +79,7 @@ const getIndexedData = async (index: string, itemId: string): Promise<ISellerGig
   }
 };
 
+// @ Method to add document to the index
 const addDataToIndex = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
   try {
     await elasticSearchClient.index({
@@ -90,4 +95,33 @@ const addDataToIndex = async (index: string, itemId: string, gigDocument: unknow
   }
 };
 
-export { checkConnection, createIndex, getIndexedData, addDataToIndex };
+// @ Method to update a particular document in the index
+// `itemId` is the id of the document we want to update
+const updateIndexedData = async (index: string, itemId: string, gigDocument: unknown): Promise<void> => {
+  try {
+    await elasticSearchClient.update({
+      index,
+      id: itemId,
+      // document to update. The key name is always `doc` and value is the
+      // document we want to update
+      doc: gigDocument
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch updateIndexedData() method error:', error);
+  }
+};
+
+// @ Method to delete a particular index
+// For delete, we just need an `index` and `itemId`
+const deleteIndexedData = async (index: string, itemId: string): Promise<void> => {
+  try {
+    await elasticSearchClient.delete({
+      index,
+      id: itemId
+    });
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch deleteIndexedData() method error:', error);
+  }
+};
+
+export { elasticSearchClient, checkConnection, createIndex, getIndexedData, addDataToIndex, updateIndexedData, deleteIndexedData };
