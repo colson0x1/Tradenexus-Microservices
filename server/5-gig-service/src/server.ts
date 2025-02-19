@@ -9,7 +9,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { verify } from 'jsonwebtoken';
 import compression from 'compression';
-import { checkConnection } from '@gig/elasticsearch';
+import { checkConnection, createIndex } from '@gig/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@gig/routes';
 
@@ -117,6 +117,7 @@ const startQueues = async (): Promise<void> => {};
 
 const startElasticSearch = (): void => {
   checkConnection();
+  createIndex('gigs');
 };
 
 const usersErrorHandler = (app: Application): void => {
