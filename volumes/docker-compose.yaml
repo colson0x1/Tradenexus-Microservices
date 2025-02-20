@@ -11,7 +11,7 @@ services:
       # Redis port is: 6379 inside the container and we're mapping it to 6379
       # outside the container i.e second is the port we're going to use to
       # access the service outside the container
-      - '6379'
+      - '6379:6379'
     command: redis-server --loglevel warning
     # Since we're running this locally, we need a way for a docker to store
     # the data because Redis is like a database. So the data needs to be stored
