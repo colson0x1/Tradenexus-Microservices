@@ -1,8 +1,8 @@
 // Im only going to GETTING from Elasticsearch. Im not going to GET from
 // MongoDB. So im only going to get the data i need from Elasticsearch.
 
-import { ISellerGig } from '@colson0x1/tradenexus-shared';
-import { addDataToIndex, getIndexedData } from '@gig/elasticsearch';
+import { IRatingTypes, IReviewMessageDetails, ISellerGig } from '@colson0x1/tradenexus-shared';
+import { addDataToIndex, deleteIndexedData, getIndexedData, updateIndexedData } from '@gig/elasticsearch';
 import { GigModel } from '@gig/models/gig.schema';
 import { publishDirectMessage } from '@gig/queues/gig.producer';
 import { gigChannel } from '@gig/server';
@@ -193,4 +193,173 @@ const createGig = async (gig: ISellerGig): Promise<ISellerGig> => {
   return createdGig;
 };
 
-export { getGigById, getSellerGigs, getSellerPausedGigs, createGig };
+/* @ Method to delete a particular gig */
+// When the seller deletes a gig, i want to remove it from a MongoDB and then
+// also remove it from Elasticsearch. And, i also need to decrement the
+// `totalGigs` value by 1.
+// For this, i only need `gigId` of type string and `sellerId` of type string.
+// And this fn is going to return void.
+const deleteGig = async (gigId: string, sellerId: string): Promise<void> => {
+  // The method i want to use is simply. I only want to use `deleteOne`
+  // I want to delete a document where the `_id` matches `gigId`
+  await GigModel.deleteOne({ _id: gigId }).exec();
+  // I'll publish the message to this same exchange, routing key and the same type
+  // as well but now for the `gigSellerId`, i'll just use `sellerId`. And now
+  // for the count, because i want to reduce the total gigs for that user by 1.
+  // So i will send this as -1. So if the user has 2 gigs and they delete 1 then
+  // i need to reduce that count by 1.
+  await publishDirectMessage(
+    gigChannel,
+    'tradenexus-seller-update',
+    'user-seller',
+    JSON.stringify({ type: 'update-gig-count', gigSellerId: sellerId, count: -1 }),
+    'Details sent to users service.'
+  );
+  await deleteIndexedData('gigs', `${gigId}`);
+};
+
+/* @ Update methods */
+
+// Method to update a particular gig.
+// Here im going to return the updated document of type `ISellerGig`
+const updateGig = async (gigId: string, gigData: ISellerGig): Promise<ISellerGig> => {
+  // Since i want to update in MongoDB, first im going touse the `findOneAndUpdate`
+  // `findOneAndUpdate` can be used to update the document and then return the
+  // document. If we don't pass the new property, it will return the old
+  // document. But if we pass the new property set to true, it'll return the
+  // updated document.
+  const document: ISellerGig = (await GigModel.findOneAndUpdate(
+    // what i want to update is, i want to update the document where the `_id`
+    // matches the `gigId`
+    { _id: gigId },
+    // if we want to update a particular field using MongoDb, then we can use
+    // the `$set` operator
+    {
+      $set: {
+        // I dont have to update everything. I dont want to update username,
+        // email and others as defined in `gig.schema.ts`. These are the
+        // properties that i want to update.
+        title: gigData.title,
+        description: gigData.description,
+        categories: gigData.categories,
+        subCategories: gigData.subCategories,
+        tags: gigData.tags,
+        price: gigData.price,
+        coverImage: gigData.coverImage,
+        expectedDelivery: gigData.expectedDelivery,
+        basicTitle: gigData.basicTitle,
+        basicDescription: gigData.basicDescription
+      }
+    },
+    // The reason why im adding this `new` is so that it'll return the new
+    // udpated document. If we dont have this new, the `findOneAndUpdate` will
+    // return the old documents before it was updated. But i want the new document,
+    // so that is why im adding this `new` property to true.
+    { new: true }
+  ).exec()) as ISellerGig;
+  if (document) {
+    // So if we have the document, then i need to update Elasticsearch using
+    // this `updateIndexedData` method as defined in `elasticsearch.ts`
+    // But note that, mongodb will return document with `_id` property. I dont
+    // need it. So i need first convert to JSON and call the update method from
+    // Elasticsearch.
+    const data: ISellerGig = document.toJSON?.() as ISellerGig;
+    // Here i pass in the name of the gig index, the document and then pass
+    // in the data i want to update it
+    // So whats Elasticsearch will do is, it will look for any document
+    // that matches this `document._id` and then replace the document field
+    // with or update the properties that matches this `data` object im passing
+    // right here.
+    await updateIndexedData('gigs', `${document._id}`, data);
+  }
+  // And then, i'll return the updated document
+  return document;
+};
+
+// Method to update the `active` property. So i want the user to be able to set
+// it either to true or false.
+// This fn will taken in the `gigId` which is of type string and `gigActive`
+// which is of type boolean and will also return document of type `ISellerGig`
+const updateActiveGigProp = async (gigId: string, gigActive: boolean): Promise<ISellerGig> => {
+  const document: ISellerGig = (await GigModel.findOneAndUpdate(
+    { _id: gigId },
+    {
+      $set: {
+        // Here i dont need all of the properties. I only need one which is the
+        // `active` property
+        active: gigActive
+      }
+    },
+    { new: true }
+  ).exec()) as ISellerGig;
+  if (document) {
+    const data: ISellerGig = document.toJSON?.() as ISellerGig;
+    // Update to Elasticsearch as well
+    await updateIndexedData('gigs', `${document._id}`, data);
+  }
+  return document;
+};
+
+// Function that will be used to update the ratings properties. Through
+// Elasticsearch Dev Tools with `GET gigs/_search`, there's properties like
+// `ratingCategories`, `ratingsCount`, and `ratingSum`. I want to be able
+// to update it when a new rating was added by a buyer for this particular
+// gig. I want to do something similar that i did in Users Service
+// i.e `users/src/services/seller.service.ts`
+const updateGigReview = async (data: IReviewMessageDetails): Promise<void> => {
+  const ratingTypes: IRatingTypes = {
+    '1': 'one',
+    '2': 'two',
+    '3': 'three',
+    '4': 'four',
+    '5': 'five'
+  };
+  const ratingKey: string = ratingTypes[`${data.rating}`];
+  // Since i want to return the document from this because i will also need to
+  // update it in Elasticsearch, im going to use `findOneAndUpdate()` instead
+  // of `updateOne()` and save it in gig constant. And also set the `new` property
+  // to true
+  const gig = await GigModel.findOneAndUpdate(
+    // Since its GigModel, that data i want to search for is `gigId`. So its
+    // the `gigId` i want to search for.
+    { _id: data.gigId },
+    {
+      $inc: {
+        // Then what im doing right here is, i want to increment the ratings
+        // value. So this `ratingsCount` is incremented by 1, also `ratingSum`
+        // incremented and update the specific key and values in `ratingCategories`
+        // as in `gig.schema.ts`
+        ratingsCount: 1,
+        // rating sum is whatever is in this `data.rating`
+        ratingSum: data.rating,
+        // And then i fetch the `ratingKey` so if its a 5 star rating, then i
+        // use 5 to fetch the key and the value. So i pass it right here, so
+        // i update the `value` and then i update the `count`.
+        // Explained detailed in `users/src/services/seller.services.ts`
+        [`ratingCategories.${ratingKey}.value`]: data.rating,
+        [`ratingCategories.${ratingKey}.count`]: 1
+      }
+    },
+    // Update the `new` property so that it'll return the new updated document.
+    // I'll also add `upsert` property to true. So what setting upsert to true
+    // means is, if the document is not found, then it just creates the document.
+    // Or if the properties, those particular properties above like `ratingsCount`,
+    // `ratingSum`, and `ratingCategories` doesn't exist in the document, then
+    // it will go ahead and add it. I think we dont actually need it but i just
+    // decided to add this upsert true property. The most important one is this
+    // `new` prpoperty.
+    { new: true, upsert: true }
+  ).exec();
+
+  if (gig) {
+    const data: ISellerGig = gig.toJSON?.() as ISellerGig;
+    // Update to Elasticsearch as well
+    await updateIndexedData('gigs', `${gig._id}`, data);
+  }
+
+  // And this function `updateGigReview` will return void. So here in this
+  // fn, once a buyer adds a review to a gig, then im going to update
+  // The method name is `updateGigReview` because its in the Gigs Service.
+};
+
+export { getGigById, getSellerGigs, getSellerPausedGigs, createGig, deleteGig, updateGig, updateActiveGigProp, updateGigReview };
