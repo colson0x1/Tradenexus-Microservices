@@ -14,6 +14,7 @@ import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@gig/routes';
 import { createConnection } from '@gig/queues/connection';
 import { Channel } from 'amqplib';
+import { consumeGigDirectMessage, consumeSeedDirectMessage } from '@gig/queues/gig.consumer';
 
 const SERVER_PORT = 4004;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServer', 'debug');
@@ -122,6 +123,8 @@ const startQueues = async (): Promise<void> => {
   // im exporting this `gigChannel` because i'll make use of this probably in
   // this service when i publish an event or publish a message.
   gigChannel = (await createConnection()) as Channel;
+  await consumeGigDirectMessage(gigChannel);
+  await consumeSeedDirectMessage(gigChannel);
 };
 
 const startElasticSearch = (): void => {
