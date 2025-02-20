@@ -12,9 +12,14 @@ import compression from 'compression';
 import { checkConnection, createIndex } from '@gig/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@gig/routes';
+import { createConnection } from '@gig/queues/connection';
+import { Channel } from 'amqplib';
 
 const SERVER_PORT = 4004;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServer', 'debug');
+// Im defining channel outside of `startQueues` because im going to need this
+// variable outside od this file.
+let gigChannel: Channel;
 
 const start = (app: Application): void => {
   securityMiddleware(app);
@@ -113,7 +118,11 @@ const routesMiddleware = (app: Application): void => {
   appRoutes(app);
 };
 
-const startQueues = async (): Promise<void> => {};
+const startQueues = async (): Promise<void> => {
+  // im exporting this `gigChannel` because i'll make use of this probably in
+  // this service when i publish an event or publish a message.
+  gigChannel = (await createConnection()) as Channel;
+};
 
 const startElasticSearch = (): void => {
   checkConnection();
@@ -161,4 +170,4 @@ const startServer = (app: Application): void => {
   }
 };
 
-export { start };
+export { start, gigChannel };
