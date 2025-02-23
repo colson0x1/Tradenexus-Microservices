@@ -22,7 +22,7 @@ GET gigs/_search
   }
 }
 */
-export async function gigsSearchBySellerId(searchQuery: string, active: boolean): Promise<ISearchResult> {
+const gigsSearchBySellerId = async (searchQuery: string, active: boolean): Promise<ISearchResult> => {
   const queryList: IQueryList[] = [
     /* @ Search the fields and only return the active gigs */
 
@@ -96,7 +96,7 @@ export async function gigsSearchBySellerId(searchQuery: string, active: boolean)
     total: total.value,
     hits: result.hits.hits
   };
-}
+};
 
 // Im going to add two more methods. The first method will be related to
 // what i've already added to Auth service, which is i want to be able to
@@ -147,13 +147,13 @@ GET gigs/_search
 // Those two methods are `gigsSearch` and `gigsSearchByCategory`.
 
 // `gigsSearch` is the same method i defined in `auth/src/services/search.service.ts`
-export async function gigsSearch(
+const gigsSearch = async (
   searchQuery: string,
   paginate: IPaginateProps,
   deliveryTime?: string,
   min?: number,
   max?: number
-): Promise<ISearchResult> {
+): Promise<ISearchResult> => {
   const { from, size, type } = paginate;
   const queryList: IQueryList[] = [
     {
@@ -256,9 +256,9 @@ export async function gigsSearch(
     total: total.value,
     hits: result.hits.hits
   };
-}
+};
 
-export async function gigsSearchByCategory(searchQuery: string): Promise<ISearchResult> {
+const gigsSearchByCategory = async (searchQuery: string): Promise<ISearchResult> => {
   const result: SearchResponse = await elasticSearchClient.search({
     index: 'gigs',
     // For size, i only want 10 documents so im hardcoding. Because here, i will
@@ -293,4 +293,68 @@ export async function gigsSearchByCategory(searchQuery: string): Promise<ISearch
     total: total.value,
     hits: result.hits.hits
   };
+};
+
+// Elasticsearch similar looking documents method
+// I want to create a method that i can use to return similar looking documents
+// to a particular gig or to a particular document based on the ID. So for example,
+// on the frontend, if the user clicks to view the complete information for a
+// particular gig, then at the bottom of the screen, i want to add all the gigs
+// that are similar to that particular gig. And Elasticsearch has some operators
+// that i can use. So for example, if the user is currently viewing a Gig
+// with a particular ID, i want to use Elasticsearch more like this operator to
+// help me return gigs based on the id that looks similar. So i can have probably
+// maybe 3 or 4 gigs that look similar to a particular gig that the user is
+// viewing, and then i'll use the more like this operator to return those gigs.
+/*
+GET gigs/_search
+{
+  "query": {
+    "more_like_this": {
+       "fields": ["username", "title", "description", "basicDescription", "basicTitle", "categories", "subCategories", "tags"],
+      "like": [
+        {
+          "_index": "gigs",
+          "_id": "6547ee5f5c323d4335dfcc17"
+        }
+      ]
+    }
+  }
 }
+ * */
+// So document with that `_id` is used as the reference. And then it will check
+// the `username` field, `title`, `basicDescription`, and the other fields.
+// And then look for terms that are similar to what exists in the same fields
+// for this particular document i.e document with `_id`.
+// Here, on the frontend this fn `getMoreGigsLikeThis` will be called when a
+// user clicks to view the information for a particular gig. Then we make the
+// request.
+// So with this, if the gig has some similar looking gigs, then based off of the
+// fields that i've specified here, its going to return it. Otherwise, its
+// going to reutrn an empty array.
+const getMoreGigsLikeThis = async (gigId: string): Promise<ISearchResult> => {
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    // size im hardcoding this to only return 5. so if its more than 5, i want
+    // to return only 5 documents.
+    size: 5,
+    query: {
+      more_like_this: {
+        fields: ['username', 'title', 'description', 'basicDescription', 'basicTitle', 'categories', 'subCategories', 'tags'],
+        like: [
+          {
+            _index: 'gigs',
+            _id: gigId
+          }
+        ]
+      }
+    }
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+export { gigsSearchBySellerId, gigsSearch, gigsSearchByCategory, getMoreGigsLikeThis };
