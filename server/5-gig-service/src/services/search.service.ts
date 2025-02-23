@@ -357,4 +357,149 @@ const getMoreGigsLikeThis = async (gigId: string): Promise<ISearchResult> => {
   };
 };
 
-export { gigsSearchBySellerId, gigsSearch, gigsSearchByCategory, getMoreGigsLikeThis };
+// Method to return the highest rated gigs. So maybe i want to return gigs with
+// 5 star ratings for a particular category. So for a particular category, I
+// want to return all the gigs with the highest rating. So probably with the
+// 5 star ratings.
+// For this im going to be using Script Query in Elasticsearch. Script query
+// is typically used in a filter context.
+// Rating is the the `ratingSum` divided by the `ratingsCount`. So if the
+// user has two ratings. So the first one is 5 star rating and the second one
+// is the 5 star rating. The `ratingSum` will be 10 and then the `ratingsCount`
+// will be 2 because they are two different ratings from maybe two different
+// buyers. So now to calculate the rating, its going to be `ratingSum` divided
+// by the `ratingsCount`. So im going to use it to get the actual rating.
+// So that is the operation i want to perform. I want to use this filter script
+// to calucuate the ratings. But i need to do a check because i don't want
+// Elasticsearch to try to calculate for cases where the `ratingsCount` is 0.
+// So if our `ratingsCount` is 0. And because we cant divide 0 by 0. So i dont
+// want to return an error and cause of that im going to check if `ratingsCount`
+// is not equal to 0. Then i divide `ratingSum` by `ratingsCount`.
+// So here on Elasticsearch Dev Tools, the `lang` i will set that to `painless`
+// and then for the `params`, im going to set a property called `threshold`. So
+// the `threshold`, i'll set this to 5. This is the value i want to use so
+// Elasticsearch can return the documents where the ratings for each document
+// match this threshold. So if after doing the calculation, the rating is 4.5,
+// then its not equal to this threshold. Its not going to return that document.
+// But if the rating after the calculation is 5 and then its equal to this
+// threshold, then Elasticsearch will return that document.
+// Here on `source`, im getting `ratingSum` property's value from the `doc` if
+// its not equal to 0 and if `doc` of `ratingSum` value divided by `doc` of
+// `ratingsCount` value so if the `ratingSum` divided by the `ratingsCount`
+// is equal to the threshold. And i can get the threshold from params.
+// So what im doing in the `source` is, im checking if `ratingSum` value is not
+// equal to 0 and then in the brackets `ratingSum` divided by `ratingsCount`
+// value so if the result of this division is equal to the threshold's value,
+// then return the documents. So that is what Elasticsearch will do.
+/*
+GET gigs/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "script": {
+          "script": {
+            "source": "doc['ratingSum'].value != 0 && (doc['ratingSum'].value / doc['ratingsCount'].value === params['threshold'])",
+            "lang": "painless",
+            "params": {
+              "threshold": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}
+ * */
+// One other thing i can do is, add specific fields to search. Like i want to
+// search all the documents with the same category where all documents are top
+// rated i.e 5 star rated.
+/*
+GET gigs/_search
+{
+  "query": {
+    "bool": {
+      "filter": {
+        "script": {
+          "script": {
+            "source": "doc['ratingSum'].value != 0 && (doc['ratingSum'].value / doc['ratingsCount'].value == params['threshold'])",
+            "lang": "painless",
+            "params": {
+              "threshold": 5
+            }
+          }
+        }
+      },
+      "must": [
+        {
+          "query_string": {
+            "fields": ["categories"],
+            "query": "Writing & Translation"
+          }
+
+        }
+      ]
+    }
+  }
+}
+ * */
+const getTopRatedGigsByCategory = async (searchQuery: string): Promise<ISearchResult> => {
+  const result: SearchResponse = await elasticSearchClient.search({
+    index: 'gigs',
+    // size im hardcoding this to only return 10. so if its more than 10, i want
+    // to return only 10 documents.
+    size: 10,
+    query: {
+      bool: {
+        filter: {
+          script: {
+            script: {
+              /* source: "doc['ratingSum'].value != 0 && (doc['ratingSum'].value / doc['ratingsCount'].value == params['threshold'])", */
+              /* source: 'doc[\'ratingSum\'].value != 0 && (doc[\'ratingSum\'].value / doc[\'ratingsCount\'].value == params[\'threshold'])', */
+              // eslint-disable-next-line
+              source: "doc['ratingSum'].value != 0 && (doc['ratingSum'].value / doc['ratingsCount'].value == params['threshold'])",
+              lang: 'painless',
+              params: {
+                threshold: 5
+              }
+            }
+          }
+        },
+        must: [
+          {
+            query_string: {
+              fields: ['categories'],
+              query: `*${searchQuery}*`
+            }
+          }
+        ]
+      }
+    }
+  });
+  const total: IHitsTotal = result.hits.total as IHitsTotal;
+  return {
+    total: total.value,
+    hits: result.hits.hits
+  };
+};
+
+// @ Test top rated gigs by category
+// Here, inside this {}, i added the `doc` property which is an object and the
+// specific fields that i want to update. If we dont add this `doc` property,
+// it'll assume that we just want to replace the complete source. It will assume
+// that we want to replace the content of the complete `_source` with a new
+// document. So we make sure, that we always have this `doc` property, curly
+// braces and then the fields we want to update.
+/*
+POST gigs/_update/6547ee735c323d4335dfcc33
+{
+  "doc": {
+    "ratingsCount": 3,
+    "ratingSum": 15
+  }
+}
+
+GET gigs/_doc/6547ee735c323d4335dfcc33
+ * */
+
+export { gigsSearchBySellerId, gigsSearch, gigsSearchByCategory, getMoreGigsLikeThis, getTopRatedGigsByCategory };
