@@ -1,6 +1,7 @@
 import { verifyGatewayRequest } from '@colson0x1/tradenexus-shared';
-import { Application } from 'express';
 import { gigRoutes } from '@gig/routes/gig';
+import { healthRoutes } from '@gig/routes/health';
+import { Application } from 'express';
 
 const BASE_PATH = '/api/v1/gig';
 
@@ -13,7 +14,8 @@ const appRoutes = (app: Application): void => {
   }); */
   // The better way to do that `/test` is creating a health route.
   // Domain middleware
-  app.use('', () => console.log('health routes'));
+  /* app.use('', () => console.log('health routes')); */
+  app.use('', healthRoutes());
 
   /* app.use(BASE_PATH, verifyGatewayRequest, () => console.log('gig routes')); */
   app.use(BASE_PATH, verifyGatewayRequest, gigRoutes());
