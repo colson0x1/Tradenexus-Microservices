@@ -13,7 +13,7 @@ import { StatusCodes } from 'http-status-codes';
 // I first validate then after validation if its successful, i upload. If the
 // upload is successful, then i create the gig and then send this response
 // back to the API gateway.
-const gig = async (req: Request, res: Response): Promise<void> => {
+const gigCreate = async (req: Request, res: Response): Promise<void> => {
   // validate is synchrous method and validateAsync is asynchronous
   // Because its synchronous, im passing this `req.body` inside this `Promise.resolve`
   // so that its going to return it as Promise. If i use async, its going to be
@@ -83,4 +83,4 @@ const gig = async (req: Request, res: Response): Promise<void> => {
   res.status(StatusCodes.CREATED).json({ message: 'Gig created successfully.', gig: createdGig });
 };
 
-export { gig };
+export { gigCreate };
