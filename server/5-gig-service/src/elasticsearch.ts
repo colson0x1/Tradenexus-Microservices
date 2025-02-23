@@ -2,7 +2,7 @@ import { Client } from '@elastic/elasticsearch';
 import { config } from '@gig/config';
 import { ISellerGig, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
-import { ClusterHealthResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
+import { ClusterHealthResponse, CountResponse, GetResponse } from '@elastic/elasticsearch/lib/api/types';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigElasticSearchServer', 'debug');
 
@@ -62,6 +62,21 @@ async function createIndex(indexName: string): Promise<void> {
     log.log('error', 'GigService createIndex() method:', error);
   }
 }
+
+// @ Method to get the number of documents inside the list
+// For example, if there are 10 documents inside the index, then this method
+// should return the number 10.
+const getDocumentCount = async (index: string): Promise<number> => {
+  try {
+    const result: CountResponse = await elasticSearchClient.count({ index });
+    return result.count;
+  } catch (error) {
+    log.log('error', 'GigService elasticsearch getIndexedData() method error:', error);
+    // Here im returning 0. If there's an error, the count will return/set it
+    // to 0.
+    return 0;
+  }
+};
 
 // @ Method to get a document from the index
 // This method getIndexedData is going to return a promise of type `ISellerGig`
@@ -124,4 +139,13 @@ const deleteIndexedData = async (index: string, itemId: string): Promise<void> =
   }
 };
 
-export { elasticSearchClient, checkConnection, createIndex, getIndexedData, addDataToIndex, updateIndexedData, deleteIndexedData };
+export {
+  elasticSearchClient,
+  checkConnection,
+  createIndex,
+  getDocumentCount,
+  getIndexedData,
+  addDataToIndex,
+  updateIndexedData,
+  deleteIndexedData
+};

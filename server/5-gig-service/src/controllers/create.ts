@@ -2,6 +2,7 @@
 and also to MongoDB */
 
 import { BadRequestError, ISellerGig, uploads } from '@colson0x1/tradenexus-shared';
+import { getDocumentCount } from '@gig/elasticsearch';
 import { gigCreateSchema } from '@gig/schemes/gig';
 import { createGig } from '@gig/services/gig.service';
 import { UploadApiResponse } from 'cloudinary';
@@ -41,6 +42,15 @@ const gig = async (req: Request, res: Response): Promise<void> => {
     throw new BadRequestError('File upload error. Try again.', 'Create gig() method');
   }
   // But if it returned an actual response, then i need to create my seller gig.
+  // Gere, before the gig is actually created, i need to call the `getDocumentCount`
+  // method from `elasticsearch.ts` so that i can use the value as value + 1
+  // as my new sortid. so if i already have 10 documents, then the new documents
+  // that is going to be added will have the sort id of 10 + 1 which is 11.
+  // So i get the total count and then add 1 to it and thats going to be the
+  // sortid of the new document.
+  // This method `getDocumentCount` will enable me to add the sort id and it
+  // will return a number
+  const count: number = await getDocumentCount('gigs');
   const gig: ISellerGig = {
     // every property here, im getting them from `req.body` except the `coverImage`
     // So for the `coverImage` im setting `result.sercureUrl`
@@ -57,7 +67,13 @@ const gig = async (req: Request, res: Response): Promise<void> => {
     expectedDelivery: req.body.expectedDelivery,
     basicTitle: req.body.basicTitle,
     basicDescription: req.body.basicDescription,
-    coverImage: `${result?.secure_url}`
+    coverImage: `${result?.secure_url}`,
+    // so if we already have 5 documents, then the 6th document will be the
+    // count + 1 and that is going to be the sortId of the new i.e 6th document.
+    // Note: for the `gigsrc/controllers/update.ts` i.e for the update, i dont
+    // need to add the `sortId` because i dont want to change the `sortId` but
+    // just addint the `sortId` to gig when it is first created i.e here
+    sortId: count + 1
   };
   // `createdGig` will return `ISellerGig`
   // `createGig` method adds gig to MongoDB, publishes an event and then adds
