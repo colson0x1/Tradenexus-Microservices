@@ -2,6 +2,7 @@ import { gigCreate } from '@gig/controllers/create';
 import { gigDelete } from '@gig/controllers/delete';
 import { gigById, gigsByCategory, moreLikeThis, sellerGigs, sellerInactiveGigs, topRatedGigsByCategory } from '@gig/controllers/get';
 import { gigs } from '@gig/controllers/search';
+import { gig } from '@gig/controllers/seed';
 import { gigUpdate, gigUpdateActive } from '@gig/controllers/update';
 import express, { Router } from 'express';
 
@@ -24,6 +25,7 @@ const gigRoutes = (): Router => {
 
   router.put('/:gigId', gigUpdate);
   router.put('/active/:gigId', gigUpdateActive);
+  router.put('/seed/:count', gig);
 
   router.delete('/:gigId/:sellerId', gigDelete);
 

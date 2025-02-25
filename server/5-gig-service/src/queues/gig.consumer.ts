@@ -9,7 +9,7 @@ import { Channel, Replies, ConsumeMessage } from 'amqplib';
 import { Logger } from 'winston';
 import { config } from '@gig/config';
 import { createConnection } from '@gig/queues/connection';
-import { updateGigReview } from '@gig/services/gig.service';
+import { seedData, updateGigReview } from '@gig/services/gig.service';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigServiceConsumer', 'debug');
 
@@ -92,8 +92,9 @@ const consumeSeedDirectMessage = async (channel: Channel): Promise<void> => {
     const tradenexusQueue: Replies.AssertQueue = await channel.assertQueue(queueName, { durable: true, autoDelete: false });
     await channel.bindQueue(tradenexusQueue.queue, exchangeName, routingKey);
     channel.consume(tradenexusQueue.queue, async (msg: ConsumeMessage | null) => {
-      /* TODO: Use seed data fn */
-
+      const { sellers, count } = JSON.parse(msg!.content.toString());
+      // This is where i need to call `seedData()`
+      await seedData(sellers, count);
       channel.ack(msg!);
     });
   } catch (error) {

@@ -125,6 +125,7 @@ const startQueues = async (): Promise<void> => {
   gigChannel = (await createConnection()) as Channel;
   await consumeGigDirectMessage(gigChannel);
   await consumeSeedDirectMessage(gigChannel);
+  await consumeSeedDirectMessage(gigChannel);
 };
 
 const startElasticSearch = (): void => {
