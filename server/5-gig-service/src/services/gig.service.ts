@@ -1,12 +1,14 @@
 // Im only going to GETTING from Elasticsearch. Im not going to GET from
 // MongoDB. So im only going to get the data i need from Elasticsearch.
 
-import { IRatingTypes, IReviewMessageDetails, ISellerGig } from '@colson0x1/tradenexus-shared';
+import { IRatingTypes, IReviewMessageDetails, ISellerDocument, ISellerGig } from '@colson0x1/tradenexus-shared';
+import { faker } from '@faker-js/faker';
 import { addDataToIndex, deleteIndexedData, getIndexedData, updateIndexedData } from '@gig/elasticsearch';
 import { GigModel } from '@gig/models/gig.schema';
 import { publishDirectMessage } from '@gig/queues/gig.producer';
 import { gigChannel } from '@gig/server';
 import { gigsSearchBySellerId } from '@gig/services/search.service';
+import { parseInt, sample } from 'lodash';
 
 // This method will get the data from Elasticsearch
 const getGigById = async (gigId: string): Promise<ISellerGig> => {
@@ -362,4 +364,83 @@ const updateGigReview = async (data: IReviewMessageDetails): Promise<void> => {
   // The method name is `updateGigReview` because its in the Gigs Service.
 };
 
-export { getGigById, getSellerGigs, getSellerPausedGigs, createGig, deleteGig, updateGig, updateActiveGigProp, updateGigReview };
+// Method that will be used to just seed some gig data
+// Im sending this `sellers` array i.e expecting this `sellers` argument to be
+// added to this seed
+const seedData = async (sellers: ISellerDocument[], count: string): Promise<void> => {
+  const categories: string[] = [
+    'Graphics & Design',
+    'Digital Marketing',
+    'Writing & Translation',
+    'Video & Animation',
+    'Music & Audio',
+    'Programming & Tech',
+    'Data',
+    'Business'
+  ];
+  // On the frontend, this `expectedDelivery` is going to be a dropdown
+  const expectedDelivery: string[] = ['1 Day Delivery', '2 Days Delivery', '3 Days Delivery', '4 Days Delivery', '5 Days Delivery'];
+  const randomRatings = [
+    { sum: 20, count: 4 },
+    { sum: 10, count: 2 },
+    { sum: 20, count: 4 },
+    { sum: 15, count: 3 },
+    { sum: 5, count: 1 }
+  ];
+
+  // Since im sending `sellers` to this `seedData` so im going to loop through
+  // through it.
+  for (let i = 0; i < sellers.length; i++) {
+    // here i will just construct the seller document
+    const sellerDoc: ISellerDocument = sellers[i];
+    // construct the title using faker
+    const title: string = `I will ${faker.word.words(5)}`;
+    const basicTitle = faker.commerce.productName();
+    const basicDescription = faker.commerce.productDescription();
+    // here im using `sample` from lodash so that it will randomly select from
+    // this `randomRatings` list above
+    const rating = sample(randomRatings);
+    // construct object that i need
+    const gig: ISellerGig = {
+      // i want to actual profile picture of the seller
+      profilePicture: sellerDoc.profilePicture,
+      sellerId: sellerDoc._id,
+      email: sellerDoc.email,
+      username: sellerDoc.username,
+      // i want title to have maximum length of 80 so if length is less than or
+      // equal to 80, then its ok else get the first 80 characters
+      title: title.length <= 80 ? title : title.slice(0, 80),
+      basicTitle: basicTitle.length <= 40 ? basicTitle : basicTitle.slice(0, 40),
+      basicDescription: basicDescription.length <= 100 ? basicDescription : basicDescription.slice(0, 100),
+      // for categories, i want to randomly select from above defined categories
+      // so i want to randomly select the values and here it expects to be a
+      // string
+      categories: `${sample(categories)}`,
+      subCategories: [faker.commerce.department(), faker.commerce.department(), faker.commerce.department()],
+      // the full description. here the minimum sentence i want to have is 2 and
+      // the maximum sentence i want to add is 4.
+      description: faker.lorem.sentences({ min: 2, max: 4 }),
+      tags: [faker.commerce.product(), faker.commerce.product(), faker.commerce.product(), faker.commerce.product()],
+      price: parseInt(faker.commerce.price({ min: 20, max: 30, dec: 0 })),
+      coverImage: faker.image.urlPicsumPhotos(),
+      expectedDelivery: `${sample(expectedDelivery)}`,
+      sortId: parseInt(count, 10) + i + 1,
+      // So what this ratingCount here means is, after every four items, i
+      // want to set the ratingsCount. so for the first, second, third and fourth
+      // document, the ratingsCount will be 0 and then the fifth document is
+      // going to add the ratingsCount. Then the sixth, seventh, eight and
+      // ninth documents will have the ratingsCount as 0. like that.
+      // so after every four loop, i want to set the ratingsCount
+      ratingsCount: (i + 1) % 4 === 0 ? rating!['count'] : 0,
+      // im dynamically getting from `randomRatings` defined above
+      ratingSum: (i + 1) % 4 === 0 ? rating!['sum'] : 0
+    };
+    // so thats the object above that i want
+    console.log(`***SEEDING GIG*** - ${i + 1} of ${count}`);
+    await createGig(gig);
+    // So thats what i need in order for me to be able to see gigs into the
+    // MongoDB database and also Elasticsearch
+  }
+};
+
+export { getGigById, getSellerGigs, getSellerPausedGigs, createGig, deleteGig, updateGig, updateActiveGigProp, updateGigReview, seedData };
