@@ -2,6 +2,7 @@ import { Create } from '@gateway/controllers/users/seller/create';
 import { Get } from '@gateway/controllers/users/seller/get';
 import { SellerSeed } from '@gateway/controllers/users/seller/seed';
 import { Update } from '@gateway/controllers/users/seller/update';
+import { authMiddleware } from '@gateway/services/auth-middleware';
 import express, { Router } from 'express';
 
 class SellerRoutes {
@@ -14,14 +15,14 @@ class SellerRoutes {
   public routes(): Router {
     /* @ GET Routes */
     // This property `:sellerId`, im getting it from the `req.params`
-    this.router.get('/seller/id/:sellerId', Get.prototype.id);
-    this.router.get('/seller/username/:username', Get.prototype.username);
-    this.router.get('/seller/random/:size', Get.prototype.random);
+    this.router.get('/seller/id/:sellerId', authMiddleware.checkAuthentication, Get.prototype.id);
+    this.router.get('/seller/username/:username', authMiddleware.checkAuthentication, Get.prototype.username);
+    this.router.get('/seller/random/:size', authMiddleware.checkAuthentication, Get.prototype.random);
     /* @ POST Routes */
-    this.router.post('/seller/create', Create.prototype.seller);
+    this.router.post('/seller/create', authMiddleware.checkAuthentication, Create.prototype.seller);
     /* @ PUT Routes */
-    this.router.put('/seller/:sellerId', Update.prototype.seller);
-    this.router.put('/seller/seed/:count', SellerSeed.prototype.seller);
+    this.router.put('/seller/:sellerId', authMiddleware.checkAuthentication, Update.prototype.seller);
+    this.router.put('/seller/seed/:count', authMiddleware.checkAuthentication, SellerSeed.prototype.seller);
 
     return this.router;
   }
