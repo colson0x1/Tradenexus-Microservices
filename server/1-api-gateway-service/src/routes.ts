@@ -6,6 +6,7 @@ import { authMiddleware } from '@gateway/services/auth-middleware';
 import { searchRoutes } from '@gateway/routes/search';
 import { buyerRoutes } from '@gateway/routes/buyer';
 import { sellerRoutes } from '@gateway/routes/seller';
+import { gigRoutes } from '@gateway/routes/gig';
 
 const BASE_PATH = '/api/gateway/v1';
 
@@ -28,6 +29,7 @@ export const appRoutes = (app: Application) => {
   // Using `SellerRoutes` class which contains different routes in this main
   // route file
   app.use(BASE_PATH, authMiddleware.verifyUser, sellerRoutes.routes());
+  app.use(BASE_PATH, authMiddleware.verifyUser, gigRoutes.routes());
 };
 
 /* @ Endpoints only for health route
