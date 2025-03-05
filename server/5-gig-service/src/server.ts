@@ -28,7 +28,7 @@ const start = (app: Application): void => {
   routesMiddleware(app);
   startQueues();
   startElasticSearch();
-  usersErrorHandler(app);
+  gigErrorHandler(app);
   startServer(app);
 };
 
@@ -133,7 +133,7 @@ const startElasticSearch = (): void => {
   createIndex('gigs');
 };
 
-const usersErrorHandler = (app: Application): void => {
+const gigErrorHandler = (app: Application): void => {
   // Here only just have to catch any error that is of type CustomError
 
   // Check for CustomError
