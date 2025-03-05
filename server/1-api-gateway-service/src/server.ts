@@ -16,9 +16,13 @@ import { axiosAuthInstance } from '@gateway/services/api/auth.service';
 import { axiosBuyerInstance } from '@gateway/services/api/buyer.service';
 import { axiosSellerInstance } from '@gateway/services/api/seller.service';
 import { axiosGigInstance } from '@gateway/services/api/gig.service';
+import { Server } from 'socket.io';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 const SERVER_PORT = 4000;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
+export let socketIO: Server;
 
 // When we initialize this class, its going to take in an instance of express
 export class GatewayServer {
@@ -204,6 +208,46 @@ export class GatewayServer {
     });
   }
 
+  /* @ Socket.IO
+   * Socket io will be used as a bidirectional tool to send data from the client
+   * to API gateway, from API gateway back to the client, or from API gateway to
+   * one or more services.
+   * Im going to use socket.io `redis-adapter` because once i deploy to production,
+   * im going to be running with PM2 and im going to be running at least 5 processes.
+   * If I dont setup with Redis adapter, then if there's a connection on one that is
+   * established when probably a particular communication is on a particular process,
+   * and then if that process dies, then that communication as well will die. But
+   * setting up with Redis adapter, i can run multiple instances in different
+   * processes. So i can use it because if i dont use Redis adapter, its going
+   * to be one instance to one process.
+   * So by running Socket.IO with the `@socket.io/redis-adapter` adapter, i can run
+   * multiple Socket.IO instances in different processes or servers that can all
+   * broadcast and emit events to and from each other.
+   * */
+  // Here, this `Server` that is returning, its from the Socket.IO server but
+  // its going to take in the http server.
+  private async createSocketIO(httpServer: http.Server): Promise<Server> {
+    // Create an instance of Socket.IO server. So this is an instance of the
+    // new Socket.IO server.
+    const io: Server = new Server(httpServer, {
+      cors: {
+        origin: config.CLIENT_URL,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+      }
+    });
+    // Now create client using socket.io redis adapter.
+    const pubClient = createClient({ url: config.REDIS_HOST });
+    // Im creating subscribe client by calling `duplicate` method on publish client.
+    const subClient = pubClient.duplicate();
+    // Using it
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    io.adapter(createAdapter(pubClient, subClient));
+    // Setting up the socketIO value that im exporting above
+    // So that socketIO equals to the io instance i created just right above
+    socketIO = io;
+    return io;
+  }
+
   private async startServer(app: Application): Promise<void> {
     try {
       // The reason why im not importing directly this server from http is
@@ -215,7 +259,10 @@ export class GatewayServer {
       // it this way, i.e just importing server from http, it will conflict
       // with Socket.io own server export.
       const httpServer: http.Server = new http.Server(app);
+      // Using the method
+      const socketIO: Server = await this.createSocketIO(httpServer);
       this.startHttpServer(httpServer);
+      this.socketIOConnections(socketIO);
     } catch (error) {
       log.log('error', 'GatewayService startServer() error method:', error);
     }
@@ -232,4 +279,7 @@ export class GatewayServer {
       log.log('error', 'GatewayService startServer() error method:', error);
     }
   }
+
+  /* Method that defines Socket.IO connection instance */
+  private socketIOConnections(io: Server): void {}
 }
