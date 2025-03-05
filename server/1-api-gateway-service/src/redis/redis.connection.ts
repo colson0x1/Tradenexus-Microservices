@@ -4,7 +4,7 @@ import { Logger } from 'winston';
 import { config } from '@gateway/config';
 
 type RedisClient = ReturnType<typeof createClient>;
-const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gigRedisConnection', 'debug');
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewayRedisConnection', 'debug');
 
 class RedisConnection {
   client: RedisClient;
