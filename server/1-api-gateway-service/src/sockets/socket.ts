@@ -1,4 +1,4 @@
-import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { IMessageDocument, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@gateway/config';
 import { GatewayCache } from '@gateway/redis/gateway.cache';
@@ -137,6 +137,22 @@ export class SocketIOAppHandler {
       // So if there's a `connect_error` event, i log and then try to reconnect.
       log.log('error', 'ChatService socket connection error:', error);
       chatSocketClient.connect();
+    });
+
+    /* @ Custom SocketIO events */
+
+    // In the callback, the data that is coming from the event from the Chat
+    // service is of type IMessageDocument
+    // So here i listen for event from the Chat service and then in the callback,
+    // i send this event to the frontend.
+    chatSocketClient.on('message received', (data: IMessageDocument) => {
+      // Now what do i want to do with this message is, i want to send the
+      // message to the frontend. So I want to send the message. Once i receive
+      // the message from the Chat service, i receive it here here in the API
+      // gateway. Now i want to send it to the frontend.
+      // Here im passing the same event name i.e `message received`. So on the
+      // frontend, im going to listen for this same event.
+      this.io.emit('message received', data);
     });
   }
 }
