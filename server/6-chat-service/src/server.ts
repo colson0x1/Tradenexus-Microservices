@@ -12,7 +12,7 @@ import compression from 'compression';
 import { checkConnection } from '@chat/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@chat/routes';
-// import { createConnection } from '@chat/queues/connection';
+import { createConnection } from '@chat/queues/connection';
 import { Channel } from 'amqplib';
 import { Server } from 'socket.io';
 
@@ -125,7 +125,9 @@ const routesMiddleware = (app: Application): void => {
 const startQueues = async (): Promise<void> => {
   // im exporting this `chatChannel` because i'll make use of this probably in
   // this service when i publish an event or publish a message.
-  /* chatChannel = (await createConnection()) as Channel; */
+  // So here i call this `createConnection()` method and the Channel that is returned,
+  // i set it to `chatChannel`.
+  chatChannel = (await createConnection()) as Channel;
 };
 
 const startElasticSearch = (): void => {
