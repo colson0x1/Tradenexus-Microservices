@@ -12,14 +12,18 @@ import compression from 'compression';
 import { checkConnection } from '@chat/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@chat/routes';
-import { createConnection } from '@chat/queues/connection';
+// import { createConnection } from '@chat/queues/connection';
 import { Channel } from 'amqplib';
+import { Server } from 'socket.io';
 
 const SERVER_PORT = 4005;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'chatServer', 'debug');
 // Im defining channel outside of `startQueues` because im going to need this
 // variable outside od this file.
 let chatChannel: Channel;
+// Im also going to use this variable outside of this file so exporting it. But
+// im giong to initialize inside this server.ts file.
+let socketIOChatObject: Server;
 
 const start = (app: Application): void => {
   securityMiddleware(app);
@@ -121,12 +125,11 @@ const routesMiddleware = (app: Application): void => {
 const startQueues = async (): Promise<void> => {
   // im exporting this `chatChannel` because i'll make use of this probably in
   // this service when i publish an event or publish a message.
-  chatChannel = (await createConnection()) as Channel;
+  /* chatChannel = (await createConnection()) as Channel; */
 };
 
 const startElasticSearch = (): void => {
   checkConnection();
-  createIndex('gigs');
 };
 
 const chatErrorHandler = (app: Application): void => {
@@ -158,9 +161,38 @@ const chatErrorHandler = (app: Application): void => {
   });
 };
 
-const startServer = (app: Application): void => {
+const startServer = async (app: Application): Promise<void> => {
   try {
     const httpServer: http.Server = new http.Server(app);
+    /* log.info(`Chat server has started with process id ${process.pid}`);
+    httpServer.listen(SERVER_PORT, () => {
+      log.info(`Chat server running on port ${SERVER_PORT}`);
+    }); */
+    const socketIO: Server = await createSocketIO(httpServer);
+    startHttpServer(httpServer);
+    socketIOChatObject = socketIO;
+  } catch (error) {
+    log.error('error', 'ChatService startServer() method error', error);
+  }
+};
+
+const createSocketIO = async (httpServer: http.Server): Promise<Server> => {
+  // Im not using socket.io adapter because i have it setup on the API gateway.
+  const io: Server = new Server(httpServer, {
+    cors: {
+      // Here on origin, i can also add `*` option. So maybe i have a socket
+      // connection that wants to come from maybe another service. So this will
+      // enable the connection to come from any client.
+      /* origin: config.API_GATEWAY_URL, */
+      origin: '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    }
+  });
+  return io;
+};
+
+const startHttpServer = (httpServer: http.Server): void => {
+  try {
     log.info(`Chat server has started with process id ${process.pid}`);
     httpServer.listen(SERVER_PORT, () => {
       log.info(`Chat server running on port ${SERVER_PORT}`);
@@ -170,4 +202,4 @@ const startServer = (app: Application): void => {
   }
 };
 
-export { start, chatChannel };
+export { start, chatChannel, socketIOChatObject };

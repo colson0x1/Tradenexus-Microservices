@@ -1,10 +1,16 @@
-/* import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
-import { config } from '@gateway/config'; */
+import { config } from '@gateway/config';
 import { GatewayCache } from '@gateway/redis/gateway.cache';
 import { Server, Socket } from 'socket.io';
+import { io, Socket as SocketClient } from 'socket.io-client';
 
-/* const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewaySocket', 'debug'); */
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewaySocket', 'debug');
+// The reason why im not adding this `chatSocketClient` in the class itself
+// is because i dont want to initialize this in the constructor. So if i add
+// this to the class, then i'll have to instantiate it or initialize it inside
+// the constructor and i dont want to do that so im creating this variable.
+let chatSocketClient: SocketClient;
 
 export class SocketIOAppHandler {
   private io: Server;
@@ -15,9 +21,25 @@ export class SocketIOAppHandler {
     this.io = io;
     // So im creating an instance of GatewayCache
     this.gatewayCache = new GatewayCache();
+    // Im calling this `chatSocketServiceIOConnections` first inside this constructor
+    // because the first time when this service runs, i connect i.e when this
+    // class `SocketIOAppHandler` is initialized or instantiated, i connect.
+    this.chatSocketServiceIOConnections();
   }
 
   public listen(): void {
+    // I also want to call this `chatSocketServiceIOConnections` here inside
+    // this listen method. The reason why im calling this inside this listen
+    // method is so incase the Chat service restarts. Because if i dont call
+    // this here, and maybe the Chat service for some reason there was a
+    // disconnection, it will not connect automatically. So i want the connection
+    // to be established automatically if there's an issue with the Chat service.
+    // And then i call it in this listen method. SO here the Chat connection
+    // will be established. For example, maybe i stopped Chat service, then
+    // im going to get error logs in the console and then if i restart it, i
+    // restart the Chat service. So i want the connection to be established
+    // automatically.
+    this.chatSocketServiceIOConnections();
     this.io.on('connection', async (socket: Socket) => {
       // The first thing i want to do is, use this `getLoggedInUsersFromCache`
       // from gateway.cache.ts. For that, im going to listen for an event
@@ -66,6 +88,55 @@ export class SocketIOAppHandler {
         // Its coming from from gateway cache but i dont need to return any result.
         await this.gatewayCache.saveUserSelectedCategory(`selectedCategories:${username}`, category);
       });
+    });
+  }
+
+  /* @ Socket.IO - Client/Server Connection Architecture
+   * I've the setup here above i.e im listening for the `connection` which is a
+   * socket connection but this is only going to be for the `connection` that is
+   * coming from the Frontend.
+   * The API Gateway needs to act as the Client for the Chat service. But here,
+   * its acting as the Server for the Frontend which acts as the Client.
+   * So now im setting it up so that it also acts as the Client for the Chat
+   * service. And to do that, i'll be installing and using the `socket.io-client`.
+   * */
+  /* @ Method that handles the connection coming from the Chat Service */
+  private chatSocketServiceIOConnections(): void {
+    // Initializing this `chatSocketClient` variable that i created which is
+    // coming from the `socket.io-client` library
+    chatSocketClient = io(config.MESSAGE_BASE_URL, {
+      // Setting transports to use the websocket connection and then if websocket
+      // is not available, then it should use polling. So this is what socket.io
+      // client will do. it will use the websocket connection and if its not
+      // available then it will try to use polling!
+      transports: ['websocket', 'polling'],
+      secure: true
+    });
+
+    // For client side, its `connect` event and for server side, its `connection`.
+    // And since this API Gateway is acting as a Client for the Chat Service so.
+    chatSocketClient.on('connect', () => {
+      // So if the connection is established between the API gateway and the
+      // Chat Service, i should see this message in the console.
+      log.info('ChatService socket connected');
+    });
+
+    // If there's disconnection, i can listen for the `disconnect` event.
+    // i.e if there's a disconection, i log the reason and then i try to
+    // connect again.
+    chatSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+      // So if there's a disconnection, im logging and then i try to connect.
+      log.log('error', 'ChatSocket disconnect reason:', reason);
+      // Try to connect again.
+      chatSocketClient.connect();
+    });
+
+    // Im listening for another built-in event. So these events, they're coming
+    // from socket.io client.
+    chatSocketClient.on('connect_error', (error: Error) => {
+      // So if there's a `connect_error` event, i log and then try to reconnect.
+      log.log('error', 'ChatService socket connection error:', error);
+      chatSocketClient.connect();
     });
   }
 }
