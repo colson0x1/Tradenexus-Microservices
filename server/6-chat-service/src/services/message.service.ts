@@ -112,7 +112,7 @@ const getUserConversationList = async (username: string): Promise<IMessageDocume
   // is either a sender or a receiver. So every message where the user is
   // either a sender or a receiver, that is what i want to return.
   const query = {
-    $or: [{ senderUsername: username }, { senderUsername: username }]
+    $or: [{ senderUsername: username }, { receiverUsername: username }]
   };
   // The reason why im getting this is so that i can get access to the last
   // message. So what i want to do is, i dont want to return all the messages.
@@ -179,4 +179,84 @@ const getUserConversationList = async (username: string): Promise<IMessageDocume
   return messages;
 };
 
-export { createConversation, addMessage, getConversation, getUserConversationList };
+// @ getMessages is a method to get messages using senderName and receiverName.
+// Im going to use this method on the frontend, probably in the components where
+// i dont have access to the conversation id.
+// This  is going to be in the message model so not in the conversation model.
+// This message function will take the sender and receiver name. So i want to
+// get messages by the sender and receiver name.
+const getMessages = async (sender: string, receiver: string): Promise<IMessageDocument[]> => {
+  // So now the query for this is going to be: every message document where
+  // the senderUsername matches the sender or the receiverUsername matches the
+  // receiver or the senderUsername matches the receiver or the receiverUsername
+  // matches the sender.
+  const query = {
+    // So if any of these critieria matches the document
+    // i.e for a particular seller and buyer, im going to have only one
+    // document. so im not going to have multiple documents for a seller and
+    // buyer conversation.
+    $or: [
+      // So any object where the senderUsername is equal to the sender and the
+      // receiverUsername is equal to the receiver.
+      { senderUsername: sender, receiverUsername: receiver },
+      // Or any object where this senderUsername matches the receiver and the
+      // receiverUsername matches whatever i have in the sender
+      { senderUsername: receiver, receiverUsername: sender }
+    ]
+  };
+  // MongoDB aggregate method returns an array
+  // Im using `match` operator. So `match` the documents using this `query`.
+  const messages: IMessageDocument[] = await MessageModel.aggregate([
+    { $match: query },
+    // I want to add the sorting option. So i want to return the messages
+    // from the oldest to the newest.
+    // So here i want to sort with the `createdAt` property from the oldest
+    // to the newest. So this is in ascending order because im sorting from the
+    // oldest to the newest. If its -1, then its going to be from newest to the
+    // oldest.
+    { $sort: { createdAt: 1 } }
+  ]);
+  return messages;
+};
+
+// Method to get the messages using conversation id.
+const getUserMessages = async (messageConversationId: string): Promise<IMessageDocument[]> => {
+  const messages: IMessageDocument[] = await MessageModel.aggregate([
+    // So every documents where the conversationId matches this messageConversationId.
+    { $match: { conversationId: messageConversationId } },
+    // And then i return the messages result in ascending order.
+    { $sort: { createdAt: 1 } }
+  ]);
+  return messages;
+};
+
+// Method to update the `offer` object.
+// i.e chat/src/models/message.schema.ts > offer {}
+// Inside the offer object, i have this `accepted` and `cancelled` property.
+// So if the buyer accepts the offer, then i want to update this `accepted`
+// property to true. And if the buyer cancels or rejects the offer, then i
+// want to update this `cancel` property to true.
+// The reason why im doing this is so that i can apply it on the cancel
+// and the update button. So i need to add a function that will be used to
+// update these properties.
+// Here `type` is going to be either `accepted` or `cancelled`
+// `messageId` is the id of the specific message that was sent with the offer.
+const updateOffer = async (messageId: string, type: string): Promise<IMessageDocument> => {
+  // `findOneAndUpdate` is going to return the updated document.
+  const message: IMessageDocument = await MessageModel.findOneAndUpdate(
+    // I want to update the message where the `_id` matches the `messageId`
+    { _id: messageId },
+    {
+      $set: {
+        // So if the type is `accepted`, then i want to update the `accepted`
+        // property to true. And if the type is `cancelled`, then i want to
+        // update the `cancelled` property to true.
+        // i.e here im dynamically updating the `type`.
+        [type]: true
+      }
+    }
+  ).exec();
+  return message;
+};
+
+export { createConversation, addMessage, getConversation, getUserConversationList, getMessages, getUserMessages, updateOffer };
