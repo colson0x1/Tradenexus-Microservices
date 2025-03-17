@@ -248,14 +248,20 @@ const updateOffer = async (messageId: string, type: string): Promise<IMessageDoc
     { _id: messageId },
     {
       $set: {
-        // So if the type is `accepted`, then i want to update the `accepted`
-        // property to true. And if the type is `cancelled`, then i want to
-        // update the `cancelled` property to true.
         // i.e here im dynamically updating the `type`.
-        [type]: true
+        // `type` will either be `accepted` or `cancelled` as mentioned on
+        // message.schema.ts
+        // So if the type is `accepted`, then i want to update the `offer.accepted`
+        // property to true. And if the type is `cancelled`, then i want to
+        // update the `offer.cancelled` property to true.
+        // So this is how i dynamically update a field in an object.
+        [`offer.${type}`]: true
       }
-    }
-  ).exec();
+    },
+    // Here im setting the `new` property to true because i want to return the
+    // new updated document, not the old one.
+    { new: true }
+  ) as IMessageDocument;
   return message;
 };
 
