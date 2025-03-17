@@ -154,5 +154,9 @@ export class SocketIOAppHandler {
       // frontend, im going to listen for this same event.
       this.io.emit('message received', data);
     });
+
+    chatSocketClient.on('message updated', (data: IMessageDocument) => {
+      this.io.emit('message updated', data);
+    });
   }
 }

@@ -230,6 +230,8 @@ const getUserMessages = async (messageConversationId: string): Promise<IMessageD
   return messages;
 };
 
+// @ Updates the `offer` property in a particular message if the type is either
+// `accepted` or `cancelled`.
 // Method to update the `offer` object.
 // i.e chat/src/models/message.schema.ts > offer {}
 // Inside the offer object, i have this `accepted` and `cancelled` property.
@@ -243,7 +245,7 @@ const getUserMessages = async (messageConversationId: string): Promise<IMessageD
 // `messageId` is the id of the specific message that was sent with the offer.
 const updateOffer = async (messageId: string, type: string): Promise<IMessageDocument> => {
   // `findOneAndUpdate` is going to return the updated document.
-  const message: IMessageDocument = await MessageModel.findOneAndUpdate(
+  const message: IMessageDocument = (await MessageModel.findOneAndUpdate(
     // I want to update the message where the `_id` matches the `messageId`
     { _id: messageId },
     {
@@ -261,8 +263,81 @@ const updateOffer = async (messageId: string, type: string): Promise<IMessageDoc
     // Here im setting the `new` property to true because i want to return the
     // new updated document, not the old one.
     { new: true }
-  ) as IMessageDocument;
+  )) as IMessageDocument;
   return message;
 };
 
-export { createConversation, addMessage, getConversation, getUserConversationList, getMessages, getUserMessages, updateOffer };
+// @ Mark single message as read.
+// This method will be used to update the `isRead` property located on the
+// `message.schema.ts`
+// Im going to add two endpoints. One will be to update `isRead` for just
+// one message and then the other will be to update `isRead` for multiple
+// messages.
+// So this method `markMessageAsRead` will be used just to update one single
+// message and then i emit event to Socket.io
+const markMessageAsRead = async (messageId: string): Promise<IMessageDocument> => {
+  // Here i look for the documents where the `_id` matches the `messageId`
+  // and im using here `findOneAndUpdate`
+  const message: IMessageDocument = (await MessageModel.findOneAndUpdate(
+    { _id: messageId },
+    {
+      $set: {
+        // So here i set the `isRead` for the specific message to true
+        isRead: true
+      }
+    },
+    // Here im setting the `new` property to true because i want to return the
+    // new updated document, not the old one.
+    { new: true }
+  )) as IMessageDocument;
+  // But here i need to emit the Socket.io event. So i send an event to  socket.io
+  // Im setting the event name here to be `message updated`
+  socketIOChatObject.emit('message updated', message);
+  return message;
+};
+
+// @ Mark many or multiple messages as read.
+// Method to update `isRead` property for multiple messages!
+// `markMultipleMessagesAsRead` or `markManyMessagesAsRead`
+// So what this method will do is, it will check for based on the receiver and
+// the sender, all the messages for these two users that still has the `isRead`
+// property set to false. And then im going to use this `messageId` to return
+// the specific message so i can emit it here.
+const markManyMessagesAsRead = async (receiver: string, sender: string, messageId: string): Promise<IMessageDocument> => {
+  (await MessageModel.updateMany(
+    // what are the documents i want to update is, documents where the sender
+    // name i.e senderUsername matches sender and receiverUsername matches
+    // receiver
+    // So i want to only look for document that matches this criteria.
+    // So it will skip any documents where the sender name is `sender` and
+    // receiver name is `receiver` and the `isRead` property is set to true.
+    // It will skip that message.
+    { senderUsername: sender, receiverUsername: receiver, isRead: false },
+    {
+      $set: {
+        isRead: true
+      }
+    },
+    // Here im setting the `new` property to true because i want to return the
+    // new updated document, not the old one.
+    { new: true }
+  )) as IMessageDocument;
+  // Here i want to return a document where the `_id` matches the `messageId`
+  // and then whatever is returned, that is what im going to send to API
+  // gateway which is the Client.
+  const message: IMessageDocument = (await MessageModel.findOne({ _id: messageId }).exec()) as IMessageDocument;
+  socketIOChatObject.emit('message updated', message);
+  return message;
+};
+
+export {
+  createConversation,
+  addMessage,
+  getConversation,
+  getUserConversationList,
+  getMessages,
+  getUserMessages,
+  updateOffer,
+  markMessageAsRead,
+  markManyMessagesAsRead
+};
