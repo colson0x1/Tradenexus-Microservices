@@ -13,7 +13,8 @@ import { checkConnection } from '@chat/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@chat/routes';
 import { createConnection } from '@chat/queues/connection';
-import { Channel } from 'amqplib';
+// import { Channel } from 'amqplib';
+import { Channel } from 'amqplib/callback_api';
 import { Server } from 'socket.io';
 
 const SERVER_PORT = 4005;
@@ -122,12 +123,21 @@ const routesMiddleware = (app: Application): void => {
   appRoutes(app);
 };
 
-const startQueues = async (): Promise<void> => {
+/* const startQueues = async (): Promise<void> => {
   // im exporting this `chatChannel` because i'll make use of this probably in
   // this service when i publish an event or publish a message.
   // So here i call this `createConnection()` method and the Channel that is returned,
   // i set it to `chatChannel`.
   chatChannel = (await createConnection()) as Channel;
+}; */
+const startQueues = async (): Promise<void> => {
+  // Here we need to handle the possibility of undefined being returned
+  const channel = await createConnection();
+  if (!channel) {
+    log.error('Failed to create RabbitMQ channel');
+    return;
+  }
+  chatChannel = channel;
 };
 
 const startElasticSearch = (): void => {

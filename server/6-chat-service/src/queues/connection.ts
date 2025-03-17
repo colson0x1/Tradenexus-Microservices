@@ -1,5 +1,57 @@
 import { config } from '@chat/config';
 import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import * as amqp from 'amqplib/callback_api';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'chatQueueConnection', 'debug');
+
+async function createConnection(): Promise<amqp.Channel | undefined> {
+  return new Promise((resolve) => {
+    try {
+      amqp.connect(`${config.RABBITMQ_ENDPOINT}`, (connErr, connection) => {
+        if (connErr) {
+          log.log('error', 'ChatService connection error:', connErr);
+          resolve(undefined);
+          return;
+        }
+
+        connection.createChannel((channelErr, channel) => {
+          if (channelErr) {
+            log.log('error', 'ChatService channel error:', channelErr);
+            resolve(undefined);
+            return;
+          }
+
+          log.info('Chat server connected to queue successfully...');
+
+          // Graceful shutdown
+          process.once('SIGINT', () => {
+            channel.close((err) => {
+              if (err) {
+                log.log('error', 'Error closing channel:', err);
+              }
+              connection.close((err) => {
+                if (err) {
+                  log.log('error', 'Error closing connection:', err);
+                }
+              });
+            });
+          });
+
+          resolve(channel);
+        });
+      });
+    } catch (error) {
+      log.log('error', 'ChatService createConnection() method error:', error);
+      resolve(undefined);
+    }
+  });
+}
+
+export { createConnection };
+
+/* import { config } from '@chat/config';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import client, { Channel, Connection } from 'amqplib';
 import { Logger } from 'winston';
 
@@ -36,4 +88,4 @@ function closeConnection(channel: Channel, connection: Connection): void {
   });
 }
 
-export { createConnection };
+export { createConnection }; */
