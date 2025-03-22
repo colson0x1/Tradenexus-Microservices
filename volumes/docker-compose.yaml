@@ -434,6 +434,32 @@ services:
     depends_on:
       - elasticsearch
       - mongodb
+  chat:
+    container_name: chat_container
+    build:
+      context: ../server/6-chat-service
+      dockerfile: Dockerfile.dev
+    restart: always
+    ports:
+      - 4005:4005
+    env_file: ../server/6-chat-service/.env
+    environment:
+      - ENABLE_APM=0
+      - DATABASE_URL=mongodb://127.0.0.1:27017/tradenexus-chat
+      - GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e
+      - JWT_TOKEN=60c60e1f014355049c2493d8d24aacd5e81e7fde4c4e0e3e349f3fe7c8b7fed3
+      - NODE_ENV=development
+      - API_GATEWAY_URL=http://localhost:4000
+      - RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
+      - CLOUD_NAME=colson0x1
+      - CLOUD_API_KEY=211615812663681
+      - CLOUD_API_SECRET=RrHVkR9yD8bQpwKMUQE9FXmSlSk
+      - ELASTIC_SEARCH_URL=http://localhost:9200
+      - ELASTIC_APM_SERVER_URL=http://localhost:8200
+      - ELASTIC_APM_SECRET_TOKEN=
+    depends_on:
+      - elasticsearch
+      - mongodb
 
 # Tell Docker Compose to create a network called elastic so that any
 # service (container) that needs to communicate with other services
