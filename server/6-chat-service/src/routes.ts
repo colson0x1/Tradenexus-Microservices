@@ -1,5 +1,7 @@
 import { verifyGatewayRequest } from '@colson0x1/tradenexus-shared';
 import { Application } from 'express';
+import { healthRoutes } from '@chat/routes/health';
+import { messageRoutes } from '@chat/routes/message';
 
 const BASE_PATH = '/api/v1/message';
 
@@ -12,9 +14,11 @@ const appRoutes = (app: Application): void => {
   }); */
   // The better way to do that `/test` is creating a health route.
   // Domain middleware
-  app.use('', () => console.log('health routes'));
+  /* app.use('', () => console.log('health routes')); */
+  app.use('', healthRoutes());
 
-  app.use(BASE_PATH, verifyGatewayRequest, () => console.log('Chat routes'));
+  /* app.use(BASE_PATH, verifyGatewayRequest, () => console.log('Chat routes')); */
+  app.use(BASE_PATH, verifyGatewayRequest, messageRoutes());
 };
 
 export { appRoutes };

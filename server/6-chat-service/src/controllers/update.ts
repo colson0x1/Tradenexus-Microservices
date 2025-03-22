@@ -15,7 +15,7 @@ const offer = async (req: Request, res: Response): Promise<void> => {
 };
 
 // Method to update multiple messages
-const multipleMessages = async (req: Request, res: Response): Promise<void> => {
+const markMultipleMessages = async (req: Request, res: Response): Promise<void> => {
   const { messageId, senderUsername, receiverUsername } = req.body;
   await markManyMessagesAsRead(receiverUsername, senderUsername, messageId);
   res.status(StatusCodes.OK).json({ message: 'Messages marked as read' });
@@ -27,4 +27,4 @@ const markSingleMessage = async (req: Request, res: Response): Promise<void> => 
   res.status(StatusCodes.OK).json({ message: 'Message marked as read', singleMessage: message });
 };
 
-export { offer, multipleMessages, markSingleMessage };
+export { offer, markMultipleMessages, markSingleMessage };
