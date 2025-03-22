@@ -1,7 +1,8 @@
 import { config } from '@chat/config';
 import { winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
-import { Channel } from 'amqplib';
+/* import { Channel } from 'amqplib'; */
+import { Channel } from 'amqplib/callback_api';
 import { createConnection } from '@chat/queues/connection';
 
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'chatServiceProducer', 'debug');
