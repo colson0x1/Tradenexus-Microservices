@@ -63,6 +63,9 @@ const message = async (req: Request, res: Response): Promise<void> => {
     isRead: req.body.isRead,
     hasOffer: req.body.hasOffer,
     offer: req.body.offer
+    // Im going to add this `createdAt` as a default in message.schema.ts
+    // because its going to conflict with unit test for create controller
+    /* createdAt: new Date() */
   };
   // Now if this `hasConversationId` property is true then i dont want to
   // create the new conversation but if its false, then i want to create

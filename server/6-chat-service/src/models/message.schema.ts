@@ -63,9 +63,7 @@ const messageSchema: Schema = new Schema(
       accepted: { type: Boolean, default: false },
       cancelled: { type: Boolean, default: false }
     },
-    // default can be added but i'll just leave it to type
-    /* createdAt: { type: Date, default: Date.now } */
-    createdAt: { type: Date }
+    createdAt: { type: Date, default: Date.now }
   },
   {
     // One last thing i want to add is to remove the version key
