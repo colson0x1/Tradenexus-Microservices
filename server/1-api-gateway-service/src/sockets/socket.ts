@@ -11,6 +11,7 @@ const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'gatewaySocket
 // this to the class, then i'll have to instantiate it or initialize it inside
 // the constructor and i dont want to do that so im creating this variable.
 let chatSocketClient: SocketClient;
+let orderSocketClient: SocketClient;
 
 export class SocketIOAppHandler {
   private io: Server;
@@ -25,6 +26,7 @@ export class SocketIOAppHandler {
     // because the first time when this service runs, i connect i.e when this
     // class `SocketIOAppHandler` is initialized or instantiated, i connect.
     this.chatSocketServiceIOConnections();
+    this.orderSocketServiceIOConnections();
   }
 
   public listen(): void {
@@ -40,6 +42,8 @@ export class SocketIOAppHandler {
     // restart the Chat service. So i want the connection to be established
     // automatically.
     this.chatSocketServiceIOConnections();
+    this.orderSocketServiceIOConnections();
+
     this.io.on('connection', async (socket: Socket) => {
       // The first thing i want to do is, use this `getLoggedInUsersFromCache`
       // from gateway.cache.ts. For that, im going to listen for an event
@@ -158,5 +162,30 @@ export class SocketIOAppHandler {
     chatSocketClient.on('message updated', (data: IMessageDocument) => {
       this.io.emit('message updated', data);
     });
+  }
+
+  /* @ Socket.IO connection for Order Service */
+
+  private orderSocketServiceIOConnections(): void {
+    orderSocketClient = io(config.ORDER_BASE_URL, {
+      transports: ['websocket', 'polling'],
+      secure: true
+    });
+
+    orderSocketClient.on('connect', () => {
+      log.info('OrderService socket connected');
+    });
+
+    orderSocketClient.on('disconnect', (reason: SocketClient.DisconnectReason) => {
+      log.log('error', 'OrderSocket disconnect reason:', reason);
+      chatSocketClient.connect();
+    });
+
+    orderSocketClient.on('connect_error', (error: Error) => {
+      log.log('error', 'OrderService socket connection error:', error);
+      chatSocketClient.connect();
+    });
+
+    /* @ Custom SocketIO events */
   }
 }
