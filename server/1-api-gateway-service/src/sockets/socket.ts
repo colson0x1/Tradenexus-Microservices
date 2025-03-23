@@ -1,4 +1,4 @@
-import { IMessageDocument, winstonLogger } from '@colson0x1/tradenexus-shared';
+import { IMessageDocument, IOrderDocument, IOrderNotifcation, winstonLogger } from '@colson0x1/tradenexus-shared';
 import { Logger } from 'winston';
 import { config } from '@gateway/config';
 import { GatewayCache } from '@gateway/redis/gateway.cache';
@@ -187,5 +187,12 @@ export class SocketIOAppHandler {
     });
 
     /* @ Custom SocketIO events */
+
+    chatSocketClient.on('order notification', (order: IOrderDocument, notification: IOrderNotifcation) => {
+      // Simply emit this event to the frontend.
+      // NOTE: This is the only event that im going to be sending from the
+      // order service to this api gateway.
+      this.io.emit('order notification', order, notification);
+    });
   }
 }
