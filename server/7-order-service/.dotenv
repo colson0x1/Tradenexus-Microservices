@@ -1,5 +1,5 @@
 ENABLE_APM=0
-DATABASE_URL=mongodb://127.0.0.1:27017/tradenexus-chat
+DATABASE_URL=mongodb://127.0.0.1:27017/tradenexus-order
 # This gateway token will contain the ids (i.e tokens from gateway-middleware
 # from shared lib) that will be used for validation or authentication
 GATEWAY_JWT_TOKEN=2cbbd6e5ac45ba08f6f4ac745bc6810fbc2c21070e8388c76846096862a47b8e

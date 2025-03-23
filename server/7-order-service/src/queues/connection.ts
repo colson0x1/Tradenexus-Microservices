@@ -1,0 +1,93 @@
+import { config } from '@order/config';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import * as amqp from 'amqplib/callback_api';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'orderQueueConnection', 'debug');
+
+async function createConnection(): Promise<amqp.Channel | undefined> {
+  return new Promise((resolve) => {
+    try {
+      amqp.connect(`${config.RABBITMQ_ENDPOINT}`, (connErr, connection) => {
+        if (connErr) {
+          log.log('error', 'OrderService connection error:', connErr);
+          resolve(undefined);
+          return;
+        }
+
+        connection.createChannel((channelErr, channel) => {
+          if (channelErr) {
+            log.log('error', 'OrderService channel error:', channelErr);
+            resolve(undefined);
+            return;
+          }
+
+          log.info('Order server connected to queue successfully...');
+
+          // Graceful shutdown
+          process.once('SIGINT', () => {
+            channel.close((err) => {
+              if (err) {
+                log.log('error', 'Error closing channel:', err);
+              }
+              connection.close((err) => {
+                if (err) {
+                  log.log('error', 'Error closing connection:', err);
+                }
+              });
+            });
+          });
+
+          resolve(channel);
+        });
+      });
+    } catch (error) {
+      log.log('error', 'OrderService createConnection() method error:', error);
+      resolve(undefined);
+    }
+  });
+}
+
+export { createConnection };
+
+/*
+import { config } from '@order/config';
+import { winstonLogger } from '@colson0x1/tradenexus-shared';
+import client, { Channel, Connection } from 'amqplib';
+import { Logger } from 'winston';
+
+const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'orderQueueConnection', 'debug');
+
+// This function returns a Promise of type undefined if there's an error in the
+// connection or Promise of type Channel if the connection is successful.
+async function createConnection(): Promise<Channel | undefined> {
+  try {
+    // Create the connection
+    const connection: Connection = await client.connect(`${config.RABBITMQ_ENDPOINT}`);
+    // With the conenction, we create our channel
+    const channel: Channel = await connection.createChannel();
+    log.info('Order server connected to queue successfully...');
+    // If there an error, we close the connection, we close the channel.
+    closeConnection(channel, connection);
+    // But if there no error, we return the channel.
+    return channel;
+  } catch (error) {
+    // But if all of this process in `try` block, if there's an error, then
+    // we catch them and log the information right here
+    log.log('error', 'OrderService createConnection() method error:', error);
+    return undefined;
+  }
+}
+
+// Graceful Shutdown
+// If there's an issue then we want to close the channel and then close the
+// connection.
+function closeConnection(channel: Channel, connection: Connection): void {
+  process.once('SIGINT', async () => {
+    await channel.close();
+    await connection.close();
+  });
+}
+
+export { createConnection };
+*/
