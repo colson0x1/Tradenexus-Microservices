@@ -104,7 +104,7 @@ const consumeSellerDirectMessage = async (channel: Channel): Promise<void> => {
     if (!channel) {
       channel = (await createConnection()) as Channel;
     }
-    const exchangeName = 'tradenexus-seller-udpate';
+    const exchangeName = 'tradenexus-seller-update';
     const routingKey = 'user-seller';
     const queueName = 'user-seller-queue';
     await channel.assertExchange(exchangeName, 'direct');

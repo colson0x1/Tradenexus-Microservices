@@ -186,7 +186,7 @@ const sellerSchema: Schema = new Schema(
     totalEarnings: { type: Number, default: 0 },
     // totalGigs is going to be the total number of gigs the user has.
     totalGigs: { type: Number, default: 0 },
-    createdAt: { type: Date, default: Date.now() }
+    createdAt: { type: Date, default: Date.now }
   },
   // I want to remove the version key
   {

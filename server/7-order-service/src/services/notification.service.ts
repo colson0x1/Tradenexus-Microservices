@@ -83,4 +83,4 @@ const sendNotification = async (data: IOrderDocument, userToId: string, message:
   socketIOOrderObject.emit('order notification', data, orderNotification);
 };
 
-export { createNotification, getNotificationsById, markNotificationAsRead };
+export { createNotification, getNotificationsById, markNotificationAsRead, sendNotification };
