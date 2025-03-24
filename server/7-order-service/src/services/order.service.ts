@@ -1,7 +1,7 @@
 // Methods required for Order Service.
 // Im going to add method to GET, CREATE and UPDATE.
 
-import { IDeliveredWork, IOrderDocument, IOrderMessage, lowerCase } from '@colson0x1/tradenexus-shared';
+import { IDeliveredWork, IExtendedDelivery, IOrderDocument, IOrderMessage, lowerCase } from '@colson0x1/tradenexus-shared';
 import { OrderModel } from '@order/models/order.schema';
 import { publishDirectMessage } from '@order/queues/order.producer';
 import { orderChannel } from '@order/server';
@@ -312,6 +312,180 @@ export const deliverOrder = async (orderId: string, delivered: boolean, delivere
     // This sendNotification will just send an in-app notification so that
     // i see it in a dropdown.
     sendNotification(order, order.buyerUsername, 'delivered your order.');
+  }
+
+  return order;
+};
+
+// @ Method that will help seller to request for an extension.
+// So this method will be used to update the `requestExtension` object thats
+// located in order.schema.ts.
+export const requestDeliveryExtension = async (orderId: string, data: IExtendedDelivery): Promise<IOrderDocument> => {
+  const { newDate, days, reason, originalDate } = data;
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // Look for an documents that matches the `orderId`.
+    { orderId },
+    {
+      // Update each of the fileds in the `requestExtension` object.
+      $set: {
+        // originalDate is going to be the first date that was agreed upon
+        // the delivery.
+        ['requestExtension.originalDate']: originalDate,
+        ['requestExtension.newDate']: newDate,
+        ['requestExtension.days']: days,
+        // reason is the reason why the rquest is made
+        ['requestExtension.reason']: reason
+      }
+    },
+    // So those are the updates i want to make and i want to return the new
+    // document.
+    { new: true }
+  ).exec()) as IOrderDocument;
+
+  if (order) {
+    // User Service -> user.consumer.ts
+    // Send an email to the buyer letting them know that the seller has
+    // requested for an extension.
+    const messageDetails: IOrderMessage = {
+      buyerUsername: lowerCase(order.buyerUsername),
+      sellerUsername: lowerCase(order.sellerUsername),
+      originalDate: order.offer.oldDeliveryDate,
+      newDate: order.offer.newDeliveryDate,
+      reason: order.offer.reason,
+      // So this is going to be the order url. when it is clicked from the
+      // email, it should open a new page in the browser.
+      orderUrl: `${config.CLIENT_URL}/orders/${orderId}/activities`,
+      template: 'orderExtension'
+    };
+    // This publishDirectMessage will send an email.
+    await publishDirectMessage(
+      orderChannel,
+      // notification service
+      'tradenexus-order-notification',
+      'order-email',
+      JSON.stringify(messageDetails),
+      'Order delivered message sent to notification service.'
+    );
+    // So this is the message that will be displayed on the frontend.
+    sendNotification(order, order.buyerUsername, 'requested for an order delivery date extension.');
+  }
+
+  return order;
+};
+
+// @ Method for the buyer to approve.
+// So i'll create separate two methods: one will be for the buyer to approve
+// the extension request, or the second one will be to reject the extension
+// request. the second one will be to reject the extension request. Im doing
+// those features in separate methods.
+
+// approveDeliveryDate or approveDeliveryExtension
+// What i want to do is update some properties in the `offer` object like
+// `oldDeliveryDate`, `newDeliveryDate`, the `reason` located in the order.schema.ts.
+// And then im going to reset all of the properties in `requestExtension` i.e
+// setting them back to  default.
+// So this is the method to approve.
+export const approveDeliveryDate = async (orderId: string, data: IExtendedDelivery): Promise<IOrderDocument> => {
+  const { newDate, days, reason, deliveryDateUpdate } = data;
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // Look for an documents that matches the `orderId`.
+    { orderId },
+    {
+      $set: {
+        ['offer.deliveryInDays']: days,
+        ['offer.newDeliveryDate']: newDate,
+        ['offer.reason']: reason,
+        // deliveryDateUpdate will come as a string and then im setting it to
+        // be a Date.
+        ['events.deliveryDateUpdate']: new Date(`${deliveryDateUpdate}`),
+        // Now reseting request extension
+        // Here's another way to do it.
+        // So once this request extension is approved, i will just reset this
+        // request extension object.
+        requestExtension: {
+          originalDate: '',
+          newDate: '',
+          days: 0,
+          reason: ''
+        }
+      }
+    },
+    // So those are the updates i want to make and i want to return the new
+    // document.
+    { new: true }
+  ).exec()) as IOrderDocument;
+
+  if (order) {
+    const messageDetails: IOrderMessage = {
+      subject: 'Congratulations: Your extension request was approved',
+      buyerUsername: lowerCase(order.buyerUsername),
+      sellerUsername: lowerCase(order.sellerUsername),
+      header: 'Request Accepted',
+      type: 'accepted',
+      message: 'You can continue working on the order.',
+      orderUrl: `${config.CLIENT_URL}/orders/${orderId}/activities`,
+      // This is the template for the approval email.
+      template: 'orderExtensionApproval'
+    };
+    // send an email. its going to go to the notification service and then
+    // it will be sent to the seller.
+    await publishDirectMessage(
+      orderChannel,
+      // notification service
+      'tradenexus-order-notification',
+      'order-email',
+      JSON.stringify(messageDetails),
+      'Order request extension approval message sent to notification service.'
+    );
+    // So this is the message that will be displayed on the frontend.
+    sendNotification(order, order.sellerUsername, 'approved your order delivery date extension request.');
+  }
+
+  return order;
+};
+
+// @ Method for rejection. If the buyer rejects.
+export const rejectDeliveryDate = async (orderId: string): Promise<IOrderDocument> => {
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // Look for an documents that matches the `orderId`.
+    { orderId },
+    {
+      $set: {
+        // Reseting request extension
+        requestExtension: {
+          originalDate: '',
+          newDate: '',
+          days: 0,
+          reason: ''
+        }
+      }
+    },
+    // So those are the updates i want to make and i want to return the new
+    // document.
+    { new: true }
+  ).exec()) as IOrderDocument;
+
+  if (order) {
+    const messageDetails: IOrderMessage = {
+      subject: 'Sorry: Your extension request was rejected',
+      buyerUsername: lowerCase(order.buyerUsername),
+      sellerUsername: lowerCase(order.sellerUsername),
+      header: 'Request Rejected',
+      type: 'rejected',
+      message: 'You can contact the buyer for more information.',
+      orderUrl: `${config.CLIENT_URL}/orders/${orderId}/activities`,
+      template: 'orderExtensionApproval'
+    };
+    await publishDirectMessage(
+      orderChannel,
+      // notification service
+      'tradenexus-order-notification',
+      'order-email',
+      JSON.stringify(messageDetails),
+      'Order request extension rejection message sent to notification service.'
+    );
+    // So this is the message that will be displayed on the frontend.
+    sendNotification(order, order.sellerUsername, 'rejected your order delivery date extension request.');
   }
 
   return order;
