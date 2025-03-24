@@ -9,6 +9,7 @@ NODE_ENV=development
 API_GATEWAY_URL=http://localhost:4000
 CLIENT_URL=http://localhost:3000
 RABBITMQ_ENDPOINT=amqp://colson:stillhome@localhost:5672
+STRIPE_API_KEY=
 CLOUD_NAME=colson0x1
 CLOUD_API_KEY=211615812663681
 CLOUD_API_SECRET=RrHVkR9yD8bQpwKMUQE9FXmSlSk
