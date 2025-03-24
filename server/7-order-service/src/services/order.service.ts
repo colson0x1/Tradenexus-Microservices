@@ -1,7 +1,14 @@
 // Methods required for Order Service.
 // Im going to add method to GET, CREATE and UPDATE.
 
-import { IDeliveredWork, IExtendedDelivery, IOrderDocument, IOrderMessage, lowerCase } from '@colson0x1/tradenexus-shared';
+import {
+  IDeliveredWork,
+  IExtendedDelivery,
+  IOrderDocument,
+  IOrderMessage,
+  IReviewMessageDetails,
+  lowerCase
+} from '@colson0x1/tradenexus-shared';
 import { OrderModel } from '@order/models/order.schema';
 import { publishDirectMessage } from '@order/queues/order.producer';
 import { orderChannel } from '@order/server';
@@ -323,7 +330,7 @@ export const deliverOrder = async (orderId: string, delivered: boolean, delivere
 export const requestDeliveryExtension = async (orderId: string, data: IExtendedDelivery): Promise<IOrderDocument> => {
   const { newDate, days, reason, originalDate } = data;
   const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
-    // Look for an documents that matches the `orderId`.
+    // Look for any documents that matches the `orderId`.
     { orderId },
     {
       // Update each of the fileds in the `requestExtension` object.
@@ -388,7 +395,7 @@ export const requestDeliveryExtension = async (orderId: string, data: IExtendedD
 export const approveDeliveryDate = async (orderId: string, data: IExtendedDelivery): Promise<IOrderDocument> => {
   const { newDate, days, reason, deliveryDateUpdate } = data;
   const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
-    // Look for an documents that matches the `orderId`.
+    // Look for any documents that matches the `orderId`.
     { orderId },
     {
       $set: {
@@ -447,7 +454,7 @@ export const approveDeliveryDate = async (orderId: string, data: IExtendedDelive
 // @ Method for rejection. If the buyer rejects.
 export const rejectDeliveryDate = async (orderId: string): Promise<IOrderDocument> => {
   const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
-    // Look for an documents that matches the `orderId`.
+    // Look for any documents that matches the `orderId`.
     { orderId },
     {
       $set: {
@@ -487,6 +494,65 @@ export const rejectDeliveryDate = async (orderId: string): Promise<IOrderDocumen
     // So this is the message that will be displayed on the frontend.
     sendNotification(order, order.sellerUsername, 'rejected your order delivery date extension request.');
   }
+
+  return order;
+};
+
+// Method to update the `buyerReview` or the `sellerReview` ojbects in order.schema.ts.
+// So if a review was added, then i need to update the buyer review object or
+// the seller review object. Im going to use one method for this.
+// So this is what i need in order to update the review for either the buyer
+// or the seller.
+export const updateOrderReview = async (data: IReviewMessageDetails): Promise<IOrderDocument> => {
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // Look for any document where the orderId matches whatever is there in this
+    // data.orderId
+    { orderId: data.orderId },
+    {
+      // This `IReviewMessageDetails` contains the `type` so im going to set the
+      // type either to seller review or the buyer review.
+      $set:
+        // This means buyer added the review
+        data.type === 'buyer-review'
+          ? // Now im going to update some fields. im going to update the `buyerReview`
+            // object and then i will also update this `buyerReview` inside the
+            // `events` object.
+            {
+              buyerReview: {
+                rating: data.rating,
+                review: data.review,
+                // createdAt is going to come as a string so i need to change it
+                // as date.
+                created: new Date(`${data.createdAt}`)
+              },
+              ['events.buyerReview']: new Date(`${data.createdAt}`)
+            }
+          : // other case, else
+            // So if its the seller review, then i update these properties
+            {
+              sellerReview: {
+                rating: data.rating,
+                review: data.review,
+                // createdAt is going to come as a string so i need to change it
+                // as date.
+                created: new Date(`${data.createdAt}`)
+              },
+              ['events.sellerReview']: new Date(`${data.createdAt}`)
+            }
+    },
+    // So those are the updates i want to make and i want to return the new
+    // document.
+    { new: true }
+  ).exec()) as IOrderDocument;
+
+  // I dont need to send any email. I only need to send this notification.
+  sendNotification(
+    order,
+    data.type === 'buyer-review' ? order.sellerUsername : order.buyerUsername,
+    // On the frontend, im going to attach, either the buyer name or the seller
+    // name infront of the message.
+    `left you a ${data.rating} star review`
+  );
 
   return order;
 };
