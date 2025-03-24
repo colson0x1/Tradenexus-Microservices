@@ -13,9 +13,10 @@ import { checkConnection } from '@order/elasticsearch';
 import { StatusCodes } from 'http-status-codes';
 import { appRoutes } from '@order/routes';
 import { createConnection } from '@order/queues/connection';
-// import { Channel } from 'amqplib';
+/* import { Channel } from 'amqplib'; */
 import { Channel } from 'amqplib/callback_api';
 import { Server } from 'socket.io';
+import { consumerReviewFanoutMessages } from '@order/queues/order.consumer';
 
 const SERVER_PORT = 4006;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'orderServer', 'debug');
@@ -123,14 +124,18 @@ const routesMiddleware = (app: Application): void => {
   appRoutes(app);
 };
 
-/* const startQueues = async (): Promise<void> => {
+const startQueues = async (): Promise<void> => {
   // im exporting this `orderChannel` because i'll make use of this probably in
   // this service when i publish an event or publish a message.
   // So here i call this `createConnection()` method and the Channel that is returned,
   // i set it to `orderChannel`.
-  chatChannel = (await createConnection()) as Channel;
-}; */
-const startQueues = async (): Promise<void> => {
+  orderChannel = (await createConnection()) as Channel;
+
+  // @ts-expect-error issues with mix match of promise and callback api.
+  await consumerReviewFanoutMessages(orderChannel);
+};
+
+/* const startQueues = async (): Promise<void> => {
   // Here we need to handle the possibility of undefined being returned
   const channel = await createConnection();
   if (!channel) {
@@ -138,7 +143,10 @@ const startQueues = async (): Promise<void> => {
     return;
   }
   orderChannel = channel;
-};
+
+  // @ts-expect-error issues with mix match of promise and callback api.
+  await consumerReviewFanoutMessages(orderChannel);
+}; */
 
 const startElasticSearch = (): void => {
   checkConnection();
