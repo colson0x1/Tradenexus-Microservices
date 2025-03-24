@@ -6,7 +6,7 @@ import { OrderModel } from '@order/models/order.schema';
 import { publishDirectMessage } from '@order/queues/order.producer';
 import { orderChannel } from '@order/server';
 import { config } from '@order/config';
-import { sendNotification } from './notification.service';
+import { sendNotification } from '@order/services/notification.service';
 
 /* @ GET methods */
 
@@ -116,12 +116,133 @@ export const createOrder = async (data: IOrderDocument): Promise<IOrderDocument>
     // actually sent.
     'Order email sent to notification service'
   );
+  // @ This notification will be sent to the seller.
   // This message in the string is what will be displayed on the dropdown on
   // the frontend.
   // So on the frontend, on the seller's page, when they click on the dropdown
   // i.e notification dropdown, they should see this message. its going to be
   // something like whatever buyer placed an order for your gig.
   sendNotification(order, data.sellerUsername, 'placed an order for your gig.');
+
+  return order;
+};
+
+// @ Method to cancel an order.
+// So here on this method, once i update in the order documents in the database,
+// i publish an event to the users service to update the seller. And then i
+// publish another event to update the buyer. Then send notification.
+export const cancelOrder = async (orderId: string, data: IOrderMessage): Promise<IOrderDocument> => {
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // In this findOneAndUpdate, i want to update the document that matches the
+    // `orderId`.
+    { orderId },
+    // And then im going to use the set operator because i want to update some
+    // specific fields.
+    // order.schema.ts
+    // What are the fields i want to update is: i want to update the `status`,
+    // `cancelled` property to true and `approvedAt` date.
+    {
+      $set: {
+        // So these are the properties that i want to update once the order
+        // is cancelled.
+        cancelled: true,
+        status: 'Cancelled',
+        approvedAt: new Date()
+      }
+    },
+    // Here im setting the `new` property to true because i want to return the
+    // new updated document, not the old one.
+    { new: true }
+  ).exec()) as IOrderDocument;
+  // @ Update Seller info
+  // Now i need to publish a normal event to the Users service.
+  // User servive -> user.consumer.ts on the type === 'cancel-order'
+  await publishDirectMessage(
+    orderChannel,
+    'tradenexus-seller-update',
+    'user-seller',
+    //  I need the seller id there so im passing `sellerId`
+    JSON.stringify({ type: 'cancel-order', sellerId: data.sellerId }),
+    'Cancelled order details sent to users service.'
+  );
+  // @ Update Buyer info
+  // also i need to update the buyer
+  // User Service ->  user.consumer.ts
+  await publishDirectMessage(
+    orderChannel,
+    'tradenexus-buyer-update',
+    'user-buyer',
+    // Here type can be anything i want except `auth` because its there on the
+    // user.consumer.ts. So since type can be anything, im leaving it as
+    // `cancel-order`
+    // In user.consumer.ts, im saying if there's anything that is not `auth`,
+    // then i execute this `updateBuyerPurchasedGigsProp` method.
+    // Here `purchasedGigs` is just the id of the gig that the buyer or seller
+    // has cancelled.
+    JSON.stringify({ type: 'cancel-order', buyerId: data.buyerId, purchasedGigs: data.purchasedGigs }),
+    'Cancelled order details sent to users service.'
+  );
+  // @ This notification will be sent to the buyer.
+  sendNotification(order, order.sellerUsername, 'cancelled your order delivery.');
+
+  return order;
+};
+
+// @ Method to approve an order
+export const approveOrder = async (orderId: string, data: IOrderMessage): Promise<IOrderDocument> => {
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    { orderId },
+    {
+      $set: {
+        // Update the `approved` property as in order.schema.ts along with
+        // `status` and `approvedAt` date.
+        // So the order will not be completed until the user approves. So once
+        // the user approves, i set approved to true, status to completed and
+        // approved at to new date.
+        approved: true,
+        status: 'Completed',
+        approvedAt: new Date()
+      }
+    },
+    { new: true }
+  ).exec()) as IOrderDocument;
+  // User Service -> user.consumer.ts
+  // There, when type === `approve-order`, it expects the `sellerId`, `ongoingJobs`,
+  // `completedJobs`, `totalEarnings` and `recentDelivery`. So these are the
+  // properties that i need to send.
+  const messageDetails: IOrderMessage = {
+    sellerId: data.sellerId,
+    buyerId: data.buyerId,
+    ongoingJobs: data.ongoingJobs,
+    completedJobs: data.completedJobs,
+    totalEarnings: data.totalEarnings, // this is the price the seller earned for lastest order delivered
+    recentDelivery: `${new Date()}`,
+    type: 'approve-order'
+  };
+  // So this will be used to update the seller info.
+  await publishDirectMessage(
+    orderChannel,
+    'tradenexus-seller-update',
+    'user-seller',
+    //  I need the seller id there so im passing `sellerId`
+    JSON.stringify(messageDetails),
+    'Approved order details sent to users service.'
+  );
+  // Update the buyer infor.
+  await publishDirectMessage(
+    orderChannel,
+    'tradenexus-buyer-update',
+    'user-buyer',
+    // user.consumer.ts -> `updateBuyerPurchasedGigsProp` inside the method
+    // implementation, im using type === `purchased-gigs`. So this is the type
+    // that i want to use.
+    // Note: if the type is `purchased-gigs`, i add i.e $push and if the type
+    // is anything else than `purchased-gigs`, then i remove i.e $pull.
+    JSON.stringify({ type: 'purchased-gigs', buyerId: data.buyerId, purchasedGigs: data.purchasedGigs }),
+    'Approved order details sent to users service.'
+  );
+  // This notification message will go to the seller.
+  sendNotification(order, order.sellerUsername, 'approved your order delivery.');
 
   return order;
 };
