@@ -1,7 +1,7 @@
 // Methods required for Order Service.
 // Im going to add method to GET, CREATE and UPDATE.
 
-import { IOrderDocument, IOrderMessage, lowerCase } from '@colson0x1/tradenexus-shared';
+import { IDeliveredWork, IOrderDocument, IOrderMessage, lowerCase } from '@colson0x1/tradenexus-shared';
 import { OrderModel } from '@order/models/order.schema';
 import { publishDirectMessage } from '@order/queues/order.producer';
 import { orderChannel } from '@order/server';
@@ -243,6 +243,76 @@ export const approveOrder = async (orderId: string, data: IOrderMessage): Promis
   );
   // This notification message will go to the seller.
   sendNotification(order, order.sellerUsername, 'approved your order delivery.');
+
+  return order;
+};
+
+// The properties that i want to update is `status`. So i set  this status
+// to delivered. also the `delivered` property. And then i want to update
+// `events` object. So im going to update this `orderDelivered` property inside
+// the `events` object located in order.schema.ts
+// So this is going to be when the seller delivers the order by sending maybe
+// zip file, video file or whatever file or an image file.
+// So this is what i need inorder for the seller to deliver an order.
+export const deliverOrder = async (orderId: string, delivered: boolean, deliveredWork: IDeliveredWork): Promise<IOrderDocument> => {
+  const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
+    // I want to update the documents that matches the `orderId`.
+    { orderId },
+    {
+      $set: {
+        delivered,
+        status: 'Delivered',
+        // Im not going to update `approvedAt`. The approved at will only be
+        // updated either when the order was cancelled or the buyer approves the
+        // delivery. But here i want to update the `orderDelivered` property
+        // from the `events` object.
+        ['events.orderDelivered']: new Date()
+      },
+      // Now i need to add this `deliveredWork` to the array. So this will
+      // just contain an object with `message` from the seller, the url of the
+      // `file`, `fileType`, `fileSize` and the `fileName`. So im going to
+      // push this `deliveredWork` work into the `deliveredWork` array.
+      $push: { deliveredWork }
+    },
+    // So those are the updates i want to make and i want to return the new
+    // document.
+    { new: true }
+  ).exec()) as IOrderDocument;
+
+  if (order) {
+    // User Service -> user.consumer.ts
+    // Now i want to publish an event by sending an email
+    // So this is going to be for sending an email.
+    const messageDetails: IOrderMessage = {
+      orderId,
+      buyerUsername: lowerCase(order.buyerUsername),
+      sellerUsername: lowerCase(order.sellerUsername),
+      title: order.offer.gigTitle,
+      description: order.offer.description,
+      // So this is going to be the order url. when it is clicked from the
+      // email, it should open a new page in the browser.
+      orderUrl: `${config.CLIENT_URL}/orders/${orderId}/activities`,
+      // Because im sending an email, so the name of the template is: orderDelivered
+      template: 'orderDelivered'
+    };
+    // So i want to send an email to the buyer letting them know that the seller
+    // has delivered the work.
+    // This publishDirectMessage will send an email.
+    await publishDirectMessage(
+      orderChannel,
+      // notification service
+      'tradenexus-order-notification',
+      'order-email',
+      JSON.stringify(messageDetails),
+      // This is just so i see information in  the console that the event
+      // was sent.
+      'Order delivered message sent to notification service.'
+    );
+    // This notification message will go to the buyer.
+    // This sendNotification will just send an in-app notification so that
+    // i see it in a dropdown.
+    sendNotification(order, order.buyerUsername, 'delivered your order.');
+  }
 
   return order;
 };
