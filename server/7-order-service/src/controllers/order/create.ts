@@ -12,7 +12,10 @@
 // only going to setup the endpoint to create a customer and then to create
 // an intent.
 
+import { BadRequestError, IOrderDocument } from '@colson0x1/tradenexus-shared';
 import { config } from '@order/config';
+import { orderSchema } from '@order/schemes/order.schema';
+import { createOrder } from '@order/services/order.service';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import Stripe from 'stripe';
@@ -120,4 +123,40 @@ const intent = async (req: Request, res: Response): Promise<void> => {
   });
 };
 
-export { intent };
+// This is the controller method that will be called when user clicks on the
+// start order button to create the order.
+// This method is responsible for creating the order. So once a buyer makes a
+// payment then i take them to a page. Probably im going to call the page on
+// the frontend requirements. So i have a requirement component. And then there
+// they can add requirements if they have requirements for the seller. Or they
+// can just click the start order button. And once that button is clicked on the
+// requirements page, im going to call this controller method.
+// So this will be used to create the order or to start the order.
+const order = async (req: Request, res: Response): Promise<void> => {
+  // Validate the object that is coming from the API gateway
+  // Here `req.body` is made possible because I've setup in the server file.
+  const { error } = await Promise.resolve(orderSchema.validate(req.body));
+  if (error?.details) {
+    throw new BadRequestError(error.details[0].message, 'Create order() method');
+  }
+  // Even though i calculate it on the frontend, i still need to calculate it
+  // here.
+  const serviceFee: number = req.body.price < 50 ? (5.5 / 100) * req.body.price + 2 : (5.5 / 100) * req.body.price;
+  // So what i want to do is even though the service fee will be sent inside
+  // req.body, i want to calculate it again and update that new property. So
+  // update the serviceFee property.
+  let orderData: IOrderDocument = req.body;
+  // So here i'll use the spread operator and then update the service fee.
+  // So this is one way where i can update a property inside an object without
+  // affecting the other properties.
+  // So with this, the service fee, even though it exists, im recalculating it
+  // again so that i have the correct value and then i update it inside the
+  // orderData object.
+  orderData = { ...orderData, serviceFee };
+  // Once it creates the order with `createOrder`, it'll have to publish some
+  // events
+  const order: IOrderDocument = await createOrder(orderData);
+  res.status(StatusCodes.CREATED).json({ message: 'Order created successfully.', order });
+};
+
+export { intent, order };
