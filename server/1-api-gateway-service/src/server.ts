@@ -21,6 +21,7 @@ import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { SocketIOAppHandler } from '@gateway/sockets/socket';
 import { axiosMessageInstance } from '@gateway/services/api/message.service';
+import { axiosOrderInstance } from '@gateway/services/api/order.service';
 
 const SERVER_PORT = 4000;
 const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'apiGatewayServer', 'debug');
@@ -150,6 +151,9 @@ export class GatewayServer {
         // new request is made to the message service, im going to add the
         // bearer token.
         axiosMessageInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
+        // Whenever any request is made to the Order Service, i attach the
+        // bearer token.
+        axiosOrderInstance.defaults.headers['Authorization'] = `Bearer ${req.session?.jwt}`;
       }
       next();
     });
