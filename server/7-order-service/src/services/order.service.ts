@@ -261,7 +261,7 @@ export const approveOrder = async (orderId: string, data: IOrderMessage): Promis
 // So this is going to be when the seller delivers the order by sending maybe
 // zip file, video file or whatever file or an image file.
 // So this is what i need inorder for the seller to deliver an order.
-export const deliverOrder = async (orderId: string, delivered: boolean, deliveredWork: IDeliveredWork): Promise<IOrderDocument> => {
+export const sellerDeliverOrder = async (orderId: string, delivered: boolean, deliveredWork: IDeliveredWork): Promise<IOrderDocument> => {
   const order: IOrderDocument = (await OrderModel.findOneAndUpdate(
     // I want to update the documents that matches the `orderId`.
     { orderId },

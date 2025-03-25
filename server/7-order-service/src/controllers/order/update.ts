@@ -4,7 +4,9 @@
 // SO that the money can be refunded to the buyer based on the customer id
 // that i specified in the order.
 
-import { BadRequestError, IOrderDocument } from '@colson0x1/tradenexus-shared';
+import crypto from 'crypto';
+
+import { BadRequestError, IDeliveredWork, IOrderDocument, uploads } from '@colson0x1/tradenexus-shared';
 import { config } from '@order/config';
 import { orderUpdateSchema } from '@order/schemes/order.schema';
 import {
@@ -12,11 +14,13 @@ import {
   approveOrder,
   cancelOrder,
   rejectDeliveryDate,
-  requestDeliveryExtension
+  requestDeliveryExtension,
+  sellerDeliverOrder
 } from '@order/services/order.service';
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import Stripe from 'stripe';
+import { UploadApiResponse } from 'cloudinary';
 
 const stripe: Stripe = new Stripe(config.STRIPE_API_KEY!, {
   typescript: true
@@ -71,4 +75,51 @@ const buyerApproveOrder = async (req: Request, res: Response): Promise<void> => 
   res.status(StatusCodes.CREATED).json({ message: 'Order approved successfully.', order });
 };
 
-export { cancel, requestExtension, deliveryDate, buyerApproveOrder };
+// Method to deliver the order.
+// When the seller delivers the order, they will likely add a file or some files.
+// maybe a zip file, an image file, whatever file.
+const deliverOrder = async (req: Request, res: Response): Promise<void> => {
+  const { orderId } = req.params;
+
+  // Whatever file that is going to be sent by the seller, i want to upload
+  // it so that i get a URL.
+  let file: string = req.body.file;
+  // So what is happening here is, if there's  a file, then i create this
+  // random characters using the crypto module.
+  const randomBytes: Buffer = await Promise.resolve(crypto.randomBytes(20));
+  const randomCharacters: string = randomBytes.toString('hex');
+  let result: UploadApiResponse;
+  if (file) {
+    // And then i check if the file type is a zip file.
+    // Then i upload by creating a public id for the zip with the random
+    // characters .zip
+    // Else if its just a normal file without the zip, that is not the zip,
+    // then i just normally call this `uploads` method.
+    // This method will upload any file type that is not a video.
+    result = (req.body.fileType === 'zip' ? await uploads(file, `${randomCharacters}.zip`) : await uploads(file)) as UploadApiResponse;
+    if (!result.public_id) {
+      // And then if there's no public id, i throw this error.
+      throw new BadRequestError('File upload error. Try again', 'Update deliverOrder() method');
+    }
+
+    // Otherwise i set the secure URL.
+    file = result?.secure_url;
+  }
+  const deliveredWork: IDeliveredWork = {
+    message: req.body.message,
+    // I set the file. whatever the file is going to be.
+    file,
+    // Because i want to display the file type on the frontend. So that is why
+    // i added fileType, fileSize and fileName.
+    fileType: req.body.fileType,
+    fileName: req.body.fileName,
+    fileSize: req.body.fileSize,
+  };
+
+  // The method i want to call is on the order.service.ts
+  const order: IOrderDocument = await sellerDeliverOrder(orderId, true, deliveredWork);
+  // And with that, i get the order and im sending the order to the frontend.
+  res.status(StatusCodes.CREATED).json({ message: 'Order delivered successfully.', order });
+};
+
+export { cancel, requestExtension, deliveryDate, buyerApproveOrder, deliverOrder };
