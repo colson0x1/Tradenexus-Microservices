@@ -12,9 +12,11 @@
 // or if no search user was returned.
 
 import { Request, Response } from 'express';
-// import * as orderService from '@order/services/order.service';
+import * as orderService from '@order/services/order.service';
 import { orderMockRequest, orderDocument, authUserPayload, orderMockResponse } from '@order/controllers/order/test/mock/order.mock';
-import { intent } from '@order/controllers/order/create';
+import { intent, order } from '@order/controllers/order/create';
+import { BadRequestError, IOrderDocument } from '@colson0x1/tradenexus-shared';
+import { orderSchema } from '@order/schemes/order.schema';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -107,6 +109,62 @@ describe('Order Controller', () => {
         message: 'Order intent created successfully.',
         clientSecret: '1234567890',
         paymentIntentId: '123456789'
+      });
+    });
+  });
+
+  describe('order method', () => {
+    it('should throw an error for invalid schema data', async () => {
+      const req: Request = orderMockRequest({}, orderDocument, authUserPayload) as unknown as Request;
+      const res: Response = orderMockResponse();
+      jest.spyOn(orderSchema, 'validate').mockImplementation((): any =>
+        Promise.resolve({
+          error: {
+            name: 'ValidationError',
+            isJoi: true,
+            details: [{ message: 'This is an error message' }]
+          }
+        })
+      );
+
+      order(req, res).catch(() => {
+        // This is the first case for this test.
+        // So here i expect it to have `This is an error message` on the first part
+        // and then the `Create order() method` on the second part.
+        expect(BadRequestError).toHaveBeenCalledWith('This is an error message', 'Create order() method');
+      });
+    });
+
+    // Second test will be just to return the correct response.
+    // Im not checking if this method `createOrder()` was actually called.
+    // I just want to check the order json response. So it should return
+    // correct JSON response.
+    it('should return correct json response', async () => {
+      const req: Request = orderMockRequest({}, orderDocument, authUserPayload) as unknown as Request;
+      const res: Response = orderMockResponse();
+      const serviceFee: number = req.body.price < 50 ? (5.5 / 100) * req.body.price + 2 : (5.5 / 100) * req.body.price;
+      let orderData: IOrderDocument = req.body;
+      orderData = { ...orderData, serviceFee };
+      jest.spyOn(orderSchema, 'validate').mockImplementation((): any => Promise.resolve({ error: {} }));
+      // I need to mock the `createOrder` method because it is this method
+      // that returns the created order.  # crete.ts controller -> order method
+      // so im using: import * as orderService from '@order/services/order.service';
+      // So the method i want to spy on is the `createOrder` method. Then i can
+      // either mock a return value or mock a resolved value.
+      // mockResolvedValue is just basically for a method that returns simply
+      // a promise.
+      // The `createOrder` method on the create.ts is what returns the order
+      // that i send to the api gateway. So here i mock the method and the
+      // method should return `orderData`.
+      jest.spyOn(orderService, 'createOrder').mockResolvedValue(orderData);
+
+      await order(req, res);
+      // 201 since response status is `CREATED`.
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Order created successfully.',
+        // And then i expect here the `order` to have a value of `orderData`.
+        order: orderData
       });
     });
   });
