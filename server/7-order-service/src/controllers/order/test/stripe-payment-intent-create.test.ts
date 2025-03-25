@@ -12,7 +12,7 @@
 // or if no search user was returned.
 
 import { Request, Response } from 'express';
-import * as orderService from '@order/services/order.service';
+// import * as orderService from '@order/services/order.service';
 import { orderMockRequest, orderDocument, authUserPayload, orderMockResponse } from '@order/controllers/order/test/mock/order.mock';
 import { intent } from '@order/controllers/order/create';
 
@@ -37,22 +37,39 @@ jest.mock('@elastic/elasticsearch');
 const mockPaymentIntentsCreate = jest.fn();
 const mockCustomersSearch = jest.fn();
 // Mock stripe.
+// The reason why it fails on npm run test throwing eror:
+// `TypeError: stripe_1.default is not a constructor`
+// because im not mocking it as a default export. So i need to mock this as a
+// default export.
 jest.mock('stripe', () => {
   /* return jest.fn().mockImplementation(() => ({
     customers: { search: mockCustomersSearch },
     paymentIntents: { create: mockPaymentIntentsCreate }
   })); */
-  jest.fn(() => ({
-    paymentIntents: {
-      // So once the code, the test gets to this create part, instead of
-      // calling the actual implementation, it will just return this
-      // mockPaymentIntentsCreate. So its not going to throw an error.
-      create: (...args: any) => mockPaymentIntentsCreate(...args) as unknown
-    },
-    customers: {
-      search: (...args: any) => mockCustomersSearch(...args) as unknown
-    }
-  }));
+  return {
+    // It seems like from the stripe class on create.ts controller, it was
+    // exported as default and esModule was used on it. So probably that is
+    // why the mocking failed.
+    // So because of how Stripe was exported.
+    // `import Stripe from 'stripe;`
+    // Its exported as a default in create.ts controller.
+    // These properties on express are not exported as a default  i.e
+    // `import { Request, Response } from 'express';`
+    // But the Stripe clas was exported as a default. So probably i need to set,
+    // return the default property as well.
+    __esModule: true,
+    default: jest.fn(() => ({
+      paymentIntents: {
+        // So once the code, the test gets to this create part, instead of
+        // calling the actual implementation, it will just return this
+        // mockPaymentIntentsCreate. So its not going to throw an error.
+        create: (...args: any) => mockPaymentIntentsCreate(...args) as unknown
+      },
+      customers: {
+        search: (...args: any) => mockCustomersSearch(...args) as unknown
+      }
+    }))
+  };
 });
 
 describe('Order Controller', () => {
