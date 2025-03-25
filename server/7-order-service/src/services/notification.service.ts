@@ -6,6 +6,7 @@
 import { IOrderDocument, IOrderNotifcation } from '@colson0x1/tradenexus-shared';
 import { OrderNotificationModel } from '@order/schemes/notification.schema';
 import { socketIOOrderObject } from '@order/server';
+import { getOrderByOrderId } from '@order/services/order.service';
 
 // This will just be used to create the notification.
 const createNotification = async (data: IOrderNotifcation): Promise<IOrderNotifcation> => {
@@ -48,8 +49,15 @@ const markNotificationAsRead = async (notificationId: string): Promise<IOrderNot
     // But with this new, it will return the updated document itself.
     { new: true }
   )) as IOrderNotifcation;
+  // After the updates and then i return the `notification` above, here im going
+  // to get the order because i want to send the order that is related to that
+  // particular notification.
+  const order: IOrderDocument = await getOrderByOrderId(notification.orderId);
   // Once the update is complete, im going to use Socket.io to send the information.
-  // ToDo
+  // So once this method `markNotificationAsRead` is called, i do the update.
+  // I want to update it in real time as well on the frontend. That is why
+  // im sending this order notification event from socket.io right here.
+  socketIOOrderObject.emit('order notification', order, notification);
   return notification;
 };
 

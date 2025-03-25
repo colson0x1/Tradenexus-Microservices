@@ -152,7 +152,7 @@ export const cancelOrder = async (orderId: string, data: IOrderMessage): Promise
       $set: {
         // So these are the properties that i want to update once the order
         // is cancelled.
-        cancelled: true,
+        orderservicescancelled: true,
         status: 'Cancelled',
         approvedAt: new Date()
       }
