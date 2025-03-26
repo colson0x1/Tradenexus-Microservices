@@ -92,7 +92,7 @@ services:
     environment:
       - POSTGRES_USER=colson
       - POSTGRES_PASSWORD=stillhome
-      - POSTGRES_DATABASE=tradenexus_reviews
+      - POSTGRES_DB=tradenexus_reviews
     ports:
       - '5432:5432'
     volumes:
