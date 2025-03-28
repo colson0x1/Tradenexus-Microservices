@@ -106,4 +106,6 @@ const databaseConnection = async (): Promise<void> => {
   }
 };
 
-export { databaseConnection };
+// I need to export Pool because i need to use it outside of this file.
+// Pool is the client connection that i created.
+export { databaseConnection, pool };
