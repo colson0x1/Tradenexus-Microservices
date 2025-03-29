@@ -2,8 +2,10 @@
 // to have the method to add to the table, method to retrieve by `gigId` and
 // method to retrieve by `sellerId`.
 
-import { IReviewDocument } from '@colson0x1/tradenexus-shared';
+import { IReviewDocument, IReviewMessageDetails } from '@colson0x1/tradenexus-shared';
 import { pool } from '@review/database';
+import { publishFanoutMessage } from '@review/queues/review.producer';
+import { reviewChannel } from '@review/server';
 
 const addReview = async (data: IReviewDocument): Promise<IReviewDocument> => {
   // If i want to create a document when using Mongo DB, then i cann the
@@ -47,7 +49,29 @@ const addReview = async (data: IReviewDocument): Promise<IReviewDocument> => {
     // and these below are the values that i want to insert into the column.
     [gigId, reviewerId, reviewerImage, sellerId, review, rating, orderId, reviewType, reviewerUsername, country, createdAtDate]
   );
-  // After this, i need to send/publish a message.
+  // Now what i want to do is, i need to create publisher because here im going
+  // to publish an event. So im going to publish the review and im going to use
+  // the fanout exchange.
+  const messageDetails: IReviewMessageDetails = {
+    gigId: data.gigId,
+    reviewerId: data.reviewerId,
+    sellerId: data.sellerId,
+    review: data.review,
+    rating: data.rating,
+    orderId: data.orderId,
+    createdAt: `${createdAtDate}`,
+    type: `${reviewType}`
+  };
+  await publishFanoutMessage(
+    reviewChannel,
+    'tradenexus-review',
+    // In this case, i don't need the routing key.
+    JSON.stringify(messageDetails),
+    // Order Service and Users Service are the services that will listen for
+    // this Fanout exchange. So the Order service and the Users service will
+    // both consume the messages being published by this Review service.
+    'Review details sent to Order and Users services.'
+  );
 
   // So that `rows` above is an array and then the value i need, because there
   // i said, it should return the complete row using *. Then what i need is
