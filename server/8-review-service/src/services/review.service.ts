@@ -6,6 +6,7 @@ import { IReviewDocument, IReviewMessageDetails } from '@colson0x1/tradenexus-sh
 import { pool } from '@review/database';
 import { publishFanoutMessage } from '@review/queues/review.producer';
 import { reviewChannel } from '@review/server';
+import { QueryResult } from 'pg';
 
 const addReview = async (data: IReviewDocument): Promise<IReviewDocument> => {
   // If i want to create a document when using Mongo DB, then i cann the
@@ -79,4 +80,53 @@ const addReview = async (data: IReviewDocument): Promise<IReviewDocument> => {
   return rows[0];
 };
 
-export { addReview };
+// Now im going to add two methods. One will be to get reviews by gigId and
+// then the other will be to get reviews by sellerId.
+
+// @ Method to get reviews by `gigId`.
+const getReviewsByGigId = async (gigId: string): Promise<IReviewDocument[]> => {
+  // In order to write the query, i need to pool the query. The above query
+  // just returns query results. I just got rows. But here im returning the
+  // complete query result.
+  // So i want to get every row where the `gigId` matches whatever whatever
+  // `gigId` i pass here and im going to SELECT command.
+  // So SELECT all from reviews. `reviews` is the name of the table where
+  // `reviews.gigId` is equal to $1 which is a placeholder. And then after the
+  // strings, i will then add the brackets and then the `gigId`. So this is
+  // the command i need. Its not a complex command. Im not having any kind of
+  // join or multiple queries added. Its just very simple.
+  // So SELECT all from reviews where `reviews.gigId` equals to `gigId`. Here
+  // im using placeholder $1. When the query is executed, the $ symbol and 1
+  // i.e $1 will be replaced by this `gigId` that i have in square brackets.
+  const reviews: QueryResult = await pool.query('SELECT * FROM reviews WHERE reviews.gigId = $1', [gigId]);
+  // And then here, i can easily just return because i want a list.
+  // So it will be `reviews.rows`.
+  return reviews.rows;
+};
+
+// @ Method to get reviews by `sellerId`.
+const getReviewsBySellerId = async (sellerId: string): Promise<IReviewDocument[]> => {
+  // For this im going to use conditions. I've this `reviewType` that im
+  // inserting above. If the `reviewType` is coming from the buyer, it will be
+  // `buyer-review` and if the `reviewType` is coming from the seller, it will
+  // be `seller-review`. So im going to SELECT all reviews where `reviews.sellerId`
+  // is equal to the `sellerId` in the square brackets. And then im going to
+  // use the AND operator where `reviews.reviewType` is equal to $2.
+  // Since i dont have another parameter passed in this method, so im going to
+  // instead hardcode the value `seller-review`. So the value for $2 is going
+  // to be `seller-review`.
+  // So since im adding the review for sellers, so the review type is giong to
+  // be `seller-review`. But if it a buyer, its going to be `buyer-review`.
+  // Here im not adding any methods to get the buyers review. Maybe on the frontend,
+  // i might decide in the future to display all the reviews added by a particular
+  // buyer.
+  // So SELECT all from reviews where `reviews.sellerId` is equal to `sellerId`
+  // that i pass in the params and `reviews.reviewType` is `seller-review`.
+  const reviews: QueryResult = await pool.query('SELECT * FROM reviews WHERE reviews.sellerId = $1 AND reviews.reviewType = $2', [
+    sellerId,
+    'seller-review'
+  ]);
+  return reviews.rows;
+};
+
+export { addReview, getReviewsByGigId, getReviewsBySellerId };
