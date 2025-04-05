@@ -8,6 +8,7 @@ const log: Logger = winstonLogger(`${config.ELASTIC_SEARCH_URL}`, 'notificationQ
 // Helper function to add delay
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// @ Retry logic with exponential backoff.
 // This function returns a Promise of type undefined if there's an error in the
 // connection or Promise of type Channel if the connection is successful.
 async function createConnection(): Promise<Channel | undefined> {
