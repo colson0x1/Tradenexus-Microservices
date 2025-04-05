@@ -1,0 +1,129 @@
+# The link contains different modules that i can use, that i can monitor.
+# Monitor system, docker, elasticsearch, http, heartbeat, kafka like that.
+# There are lot of modules i can monitor. So if i want to add a specific module
+# that i want to monitor, this reference link is the doorway.
+# https://sourcegraph.com/github.com/elastic/beats/-/blob/metricbeat/metricbeat.reference.yml
+metricbeat.config:
+  modules:
+    # With this path, its going to check inside the container for any files
+    # inside modules.d with .yml extension
+    path: ${path.config}/modules.d/*.yml
+    # Reload module configs as they change:
+    # Here i set reload to false so if maybe i change anything, i'll have to
+    # stop the container and restart it.
+    reload.enabled: false
+
+metricbeat.autodiscover:
+  providers:
+    - type: docker
+      hints.enabled: true
+
+# This is how modules is defined, metricbeat.modules.
+# https://www.elastic.co/guide/en/beats/metricbeat/current/metricbeat-module-docker.html
+metricbeat.modules:
+  # Module name which is Docker.
+  - module: docker
+    # An then metricksets that i want to collect
+    metricsets:
+      # I want to collect metrics from containers, cpu, disk, event, healthcheck,
+      # info, memory and network. So these are the metricsets from them.
+      # And i passed them as volumes down below on (# docker module) so that
+      # metricbeat can have access to it.
+      - 'container'
+      - 'cpu'
+      - 'diskio'
+      - 'healthcheck'
+      - 'info'
+      - 'memory'
+      - 'network'
+    # And then i specify the hosts
+    hosts: ['unix:///var/run/docker.sock']
+    # The period i.e how often do i want it to be collected.
+    # So periodically every 10 seconds and enabled true i.e i want it to collect
+    # metrics every 10 seconds.
+    period: 10s
+    enabled: true
+
+  # System is the host system that im running on.
+  - module: system
+    # I want to get CPU information, load, memory, process and all of these
+    # informations from the system module.
+    metricsets:
+      - cpu # CPU usage
+      - load # CPU load averages
+      - memory # Memory usage
+      - network # Network IO
+      - process # Per process metrics
+      - process_summary # Process summary
+      - uptime # System Uptime
+      - socket_summary # Socket summary
+      - core # Per CPU core usage
+      - diskio # Disk IO
+      - filesystem # File system usage for each mountpoint
+      - fsstat # File system summary metrics
+      - socket # Sockets and connection info (linux only)
+    enabled: true
+    period: 10s
+    processes: ['.*']
+    hostfs: '/hostfs'
+    # For CPU metrics, im setting percentages and normalized percentages.
+    cpu.metrics: ['percentages', 'normalized_percentages']
+    core.metrics: ['percentages']
+
+  - module: rabbitmq
+    metricsets: ['node', 'queue', 'connection', 'exchange', 'shovel']
+    enabled: true
+    period: 10s
+    hosts: ['127.0.0.1:15672']
+
+  - module: mongodb
+    metricsets: ['dbstats', 'status', 'collstats', 'metrics', 'replstatus']
+    period: 10s
+    enabled: true
+    # The hosts must be passed as MongoDB URLs in the format:
+    # [mongodb://][user:pass@]host[:port].
+    # The username and password can also be set using the respective configuration
+    # options.
+    # Note: The credentials in the URL take precedence over the username and
+    # password configuration options.
+    hosts: ['mongodb://127.0.0.1:27017']
+
+  - module: mysql
+    # For MySQL module, im only getting status and performance.
+    metricsets:
+      - status
+      - performance
+    period: 10s
+    hosts: ['tcp(127.0.0.1:3306)/']
+    # My username and password that is used to connect to MySQL.
+    username: colson
+    password: stillhome
+
+  - module: postgresql
+    enabled: true
+    metricsets:
+      - database
+      - bgwriter
+      - activity
+
+    period: 10s
+    # This is the host.
+    hosts: ['postgres://127.0.0.1:5432']
+    # My username and password that is used to connect to Postgres.
+    username: colson
+    password: stillhome
+
+processors:
+  - add_cloud_metadata: ~
+
+# And then the output, I want to send the metrics to the Elasticsearch. And then
+# i view it on Kibana.
+output.elasticsearch:
+  # If i dont have the container name, i can use the service name. But for my
+  # own case, i have the container name which is elasticsearch_container.
+  hosts: ['http://elasticsearch_container:9200']
+  # Default username and default password.
+  # username: 'elastic'
+  username: 'colson'
+  # password: 'changeme'
+  password: 'stillhome'

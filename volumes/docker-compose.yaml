@@ -201,6 +201,9 @@ services:
       # security.
       # X-Pack is a set of commercial features for Elasticsearch that enhance
       # its capabilities arouond security, monitoring, alerting and more.
+      # xpack.security.enabled: 'false'
+      # If i want to use authentication on metricbeat.yml, i should enable
+      # this security in Elasticsearch:
       xpack.security.enabled: 'false'
       # Enable the collection of monitoring data, which Elasticsearch can
       # send to a monitoring cluster. This allows us to track metrics like
@@ -212,7 +215,8 @@ services:
       # join the cluster.
       # If in a local or development environment, if security is disabled i.e
       # `xpack.security.enabled: 'fase'`, then this may not be necessary.
-      xpack.security.enrollment.enabled: 'true'
+      # xpack.security.enrollment.enabled: 'true'
+      xpack.security.enrollment.enabled: 'false'
       # Enable token based authentication for Elasticsearch which is part of
       # X-Pack Security authentication system. This is typically used in
       # production or secure environments where we want to use token-based
@@ -220,7 +224,8 @@ services:
       # authentication token can be used for authenticating requests to
       # Elasticsearch, rather than requiring traditional username/password
       # authentication.
-      xpack.security.authc.token.enabled: 'true'
+      # xpack.security.authc.token.enabled: 'true'
+      xpack.security.authc.token.enabled: 'false'
     # Elastic search runs on port 9200
     ports:
       # This is the port it uses to access the Elasticsearch REST API. But if
@@ -257,7 +262,9 @@ services:
   kibana:
     container_name: kibana_container
     # image: docker.elastic.co/kibana/kibana:7.17.26
-    image: docker.elastic.co/kibana/kibana:8.12.2
+    # image: docker.elastic.co/kibana/kibana:8.12.2
+    # Latest Kibana Image for Docker
+    image: docker.elastic.co/kibana/kibana:8.17.4
     restart: always
     environment:
       # We need to set the host. And if we're using the multi node clusters,
@@ -293,6 +300,43 @@ services:
     # Kibana depends on Elasticsearch.
     depends_on:
       - elasticsearch
+  metricbeat:
+    container_name: metricbeat_container
+    # Note: Version numbers should all be same for Elasticsearch, Kibanna,
+    # & Metricbeat.
+    image: docker.elastic.co/beats/metricbeat:8.17.4
+    # Setting user as root so that im able to allow metricbeat to read Docker
+    # Socket.
+    user: root
+    # Port for Metricbeat is 5066
+    ports:
+      - 5066:5066
+    # I use the same networks.
+    networks:
+      - elastic
+    # Because i want to get data from Docker, i'll need to add some volumes.
+    # Here the first volume will be to setup metricbeat yml file.
+    volumes:
+      # Im mapping this metricbeat.yml file to the metricbeat.yml inside the
+      # container.
+      - ./metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      # @ Set up the volumes for Docker module
+      # Then i need to map all the volumes.
+      # So for metricbeat to have access to my Docker containers and Docker
+      # resources, i map this volume.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # @ System module
+      # This will get access to my system.
+      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
+      - /proc:/hostfs/proc:ro
+      - /:/hostfs:ro
+    # This is some commands that i added so that metricbeat can have access to
+    # my system. i.e This will allow metricbeat to get metrics from my system.
+    # command: ['--strict.perms=false', '-system.hostfs=/hostfs']
+    command: ['--strict.perms=false', '--system.hostfs=/hostfs']
+    depends_on:
+      - elasticsearch
+
   gateway:
     container_name: gateway_container
     # THis is where we need to set the Docker image that it requires or the
