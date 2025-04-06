@@ -191,6 +191,14 @@ services:
       # run as a single-node cluster, meaning it will not try to discover or
       # communicate with any other nodes. It operates as a standalone instance
       discovery.type: single-node
+      network.host: 0.0.0.0
+      transport.host: 127.0.0.1
+      http.host: 0.0.0.0
+      # APM Server
+      # So for the new version of APM higher than 8.11.0, security needs to
+      # be enabled, network host should be set because im using the localhost
+      # and then set the xpack.security.authc.token.enable to true
+
       # Disable security features
       # Security was disabled by default in version 7. But now, in version 8,
       # we have to manually disable it else it will request it for a valid
@@ -204,7 +212,24 @@ services:
       # xpack.security.enabled: 'false'
       # If i want to use authentication on metricbeat.yml, i should enable
       # this security in Elasticsearch:
-      xpack.security.enabled: 'false'
+      # In order to use APM server, i need to enable security.
+      # Every service that tries to connect to Elasticsearch like Metricbeat,
+      # Kibana, Heartbeat, APM. They all have default password `changeme`.
+      # Once i enable this seurity to true, i can no more use the default password.
+      # So if i enable this to true, Kibana will not connect with the `changeme`
+      # password. i need to  update the changeme password and then use the
+      # Kibana user.
+      # And then in every case where i use the Elasticsearch password i.e
+      # `changeme`, im going to udate all.
+      # Everything im doing is just for my local environment so that i can run
+      # APM server.
+      # xpack.security.enabled: 'false'
+      xpack.security.enabled: 'true'
+      # With this enabled, I can create API keys using Elasticsearch's Security
+      # API and use them # in my request headers for authentication. Since
+      # API keys are generally considered more secure for programmatic access
+      # compared to basic authentication.
+      xpack.security.authc.api_key.enabled: 'true'
       # Enable the collection of monitoring data, which Elasticsearch can
       # send to a monitoring cluster. This allows us to track metrics like
       # resource usage, performance, indexing rates, etc.
@@ -215,8 +240,9 @@ services:
       # join the cluster.
       # If in a local or development environment, if security is disabled i.e
       # `xpack.security.enabled: 'fase'`, then this may not be necessary.
-      # xpack.security.enrollment.enabled: 'true'
-      xpack.security.enrollment.enabled: 'false'
+      # xpack.security.enrollment.enabled: 'false'
+      # Need to enable for APM.
+      xpack.security.enrollment.enabled: 'true'
       # Enable token based authentication for Elasticsearch which is part of
       # X-Pack Security authentication system. This is typically used in
       # production or secure environments where we want to use token-based
@@ -225,7 +251,18 @@ services:
       # Elasticsearch, rather than requiring traditional username/password
       # authentication.
       # xpack.security.authc.token.enabled: 'true'
-      xpack.security.authc.token.enabled: 'false'
+      # xpack.security.authc.token.enabled: 'false'
+      # Need to enable for APM.
+      xpack.security.authc.token.enabled: 'true'
+      # Since i upadted xpack security to true, Elasticsearch Kibana will not
+      # to use the default `changeme` password. So i need to change the password.
+      # NOTE:
+      # Whenever i stop and maybe want to restart Elasticsearch, i need to make
+      # sure that i delete the volume for Elasticsearch. Because the volumes
+      # contains the data, if i dont delete it and just restart it, it'll still
+      # contain the previous data.
+      ELASTIC_PASSWORD: stillhome
+
     # Elastic search runs on port 9200
     ports:
       # This is the port it uses to access the Elasticsearch REST API. But if
@@ -256,7 +293,7 @@ services:
       - ./docker-volumes/elasticsearch-data:/usr/share/elasticsearch/data
     # Connect Elasticsearch container to the elastic network. Doing this makes
     # sure that, Elasticsearch container can communicate with other containers
-    # that are also connected to this elsatic network.
+    # that are also connected to this elastic network.
     networks:
       - elastic
   kibana:
@@ -279,6 +316,44 @@ services:
       # unique url.
       # So with this url, Kibana will get access to the Elasticsearch service.
       - ELASTICSEARCH_HOST=['http://elasticsearch_container:9200']
+      # If i just tried to restart Kibana without this login credentials, it will
+      # throw an error. Error message like `Unable to retrieve information for
+      # Elasticsearch nodes. security_exception`. So `missing authentication
+      # credentials for REST request`. So Kibana cannot connect to Elasticsearch.
+      # The reason is it tries to still use the default password. And even  if
+      # i set the credentials i.e change the password, there's new error. The
+      # error message is `[config validation[elasticsearch].username]: value of
+      # "elastic" is forbidden. This is a superuser account`. And it says, `Use
+      # a service token account instead`.
+      # So what im going to do is, im going to update the password for kibana
+      # user and use that and also create service account token.
+      # So to update the password, im going to use `curl`. I'll do that from
+      # inside the elasticsearch container. So from terminal, go into the
+      # elasticsearch container and then run curl command with exec:
+      # `
+      # $ docker exec -it elasticsearch_container bash
+      # # -H is the header and after is the api to update kibana password.
+      # # i want to updatre the `/user`, and the username is `kibana_system` and
+      # # i want to update the password for that `user`. and then i add the object
+      # # to actually update the password.
+      # # `password` is the key and `stillhome` is the password.
+      # # \ is escaping the string quotes.
+      # @ So this is the command that im using to update the Kibana user!
+      # @ So Kibana username is is `kibana_system`.
+      #
+      # $ curl -s -X POST -u colson:stillhome -H "Content-Type: application/json" http://localhost:9200/_security/user/kibana_system/_password -d "{ \"password\": \"stillhome\" }"
+      # `elastic` is the superuser.
+      # $ curl -s -X POST -u elastic:stillhome -H "Content-Type: application/json" http://localhost:9200/_security/user/kibana_system/_password -d "{ \"password\": \"stillhome\" }"
+      #
+      # Now if i use this on Elasticsearch container terminal, and if i get
+      # curly braces {}, that means the update was successful. But if i don't
+      # get any response, then it was not applied.
+      # `
+      # `kibana_system` is a built in user designed for Kibana service. It has
+      # the permission needed for Kibana to communicate with Elasticsearch.
+      # `colson` is regular user account intended for human interaction.
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=stillhome
     # Port for Kibana is 5601
     ports:
       - 5601:5601
