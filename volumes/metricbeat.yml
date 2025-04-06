@@ -124,6 +124,11 @@ output.elasticsearch:
   hosts: ['http://elasticsearch_container:9200']
   # Default username and default password.
   # username: 'elastic'
-  username: 'colson'
   # password: 'changeme'
+  # Update to new password based on ELASTIC_PASSWORD on elastic service on
+  # docker-compose.yml
+  username: 'elastic'
   password: 'stillhome'
+  # I also have to make a change to .env variables of every microservice
+  # now:
+  # http://elastic:stillhome@localhost:9200

@@ -126,8 +126,7 @@ monitoring.enabled: true
 # i view it using Kibana.
 output.elasticsearch:
   hosts: ['http://elasticsearch_container:9200']
-  # Default username and default password.
-  # username: 'elastic'
-  username: 'colson'
-  # password: 'admin1234'
+  # Update to new password based on ELASTIC_PASSWORD on elastic service on
+  # docker-compose.yml
+  username: 'elastic'
   password: 'stillhome'

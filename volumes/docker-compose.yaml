@@ -261,6 +261,8 @@ services:
       # sure that i delete the volume for Elasticsearch. Because the volumes
       # contains the data, if i dont delete it and just restart it, it'll still
       # contain the previous data.
+      # So the Kibana login will be:
+      # username -> elastic & password -> stillhome
       ELASTIC_PASSWORD: stillhome
 
     # Elastic search runs on port 9200
@@ -354,6 +356,53 @@ services:
       # `colson` is regular user account intended for human interaction.
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=stillhome
+      # @ Now creating service token for Kibana:
+      # Elastic has some tools.
+      # `
+      # $ docker exec -it elasticsearch_container bash
+      # `
+      # If i do `$ ls`, there are many folders. Inside the bin folder, i.e `$ ls bin`,
+      # elastic has some tools that i can use from the terminal to create some
+      # value, some resources. For example, if i want to setup a new password,
+      # i just need to call this `elasticsearch-setup-password` and then i can
+      # add some other properties. There are others too like check-users,
+      # service-tokens. So these are commandline tools that  i can use. And there,
+      # if i want to create some certificate using the terminal from Elasticsearch
+      # container, i can use `elasticsearch-certgen` like that. So those are
+      # CLI tools i can use. But i just want to use `elasticsearch-service-tokens`.
+      # So i want to create service tokens for Kibana.
+      # I can either: `$ cd bin`
+      # OR if i want to execute outside the `bin`, i can just do:
+      # elastic/kibana means elasticsearch will use this and it will know that
+      # i want to change and create a service token for Kibana. If there's a
+      # APM server or Fleet, i can just change it like `elastic/fleet`.
+      # `
+      # $ bin/elasticsearch-service-tokens create elastic/kibana tradenexus-kibana
+      # `
+      # That will create the service token. Kibana will use this generated
+      # service token to connect to Elasticsearch. If i stop Kibana or Elasticsearch
+      # and then delete volumes/elasticsearch-data, i have to recreate this
+      # service token. And i have to change  the password as well with curl
+      # command.
+      # i.e
+      # `
+      # $ curl -s -X POST -u elastic:stillhome -H "Content-Type: application/json" http://localhost:9200/_security/user/kibana_system/_password -d "{ \"password\": \"stillhome\" }"
+      # $ bin/elasticsearch-service-tokens create elastic/kibana tradenexus-kibana
+      # `
+      # So if i stop Elasticsearch and then delete the volume, then i have to
+      # change the password for `kibana_system` and also create new service token.
+      # Im using that generated token here.
+      - ELASTICSEARCH_SERVICEACCOUNT_TOKEN=AAEAAWVsYXN0aWMva2liYW5hL3RyYWRlbmV4dXMta2liYW5hOjdUdDl3VHlxUmlLY21rNkh3NGx4UGc
+      # Im going to setup the Fleet server. So i can also use the APM server
+      # as well.
+      # NOTE: More recently Elasticsearch advises to use Fleet to setup APM
+      # Server.
+      # So for me, i just need to APM service and it will take care of the
+      # Fleet itself.
+      # Here im adding the elasticsearch endpoint
+      # - XPACK_FLEET_AGENTS_ELASTICSEARCH_HOSTS=['http://elasticsearch_container:9200']
+      - XPACK_FLEET_AGENTS_ELASTICSEARCH_HOSTS=["http://elasticsearch_container:9200"]
+
     # Port for Kibana is 5601
     ports:
       - 5601:5601

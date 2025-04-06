@@ -14,11 +14,17 @@ xpack.fleet.agents.enabled: true
 xpack.fleet.agents.elasticsearch.hosts: ['http://elasticsearch_container:9200']
 xpack.reporting.roles.enabled: true
 xpack.fleet.agentIdVerificationEnabled: false
+# These are just random tokens
 xpack.security.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
 xpack.encryptedSavedObjects.encryptionKey: fhjskloppd678ehkdfdlliverpoolfcr
 # xpack.reporting.kibanaServer.hostname: localhost
 
 ## Add policy for apm-server integration
+# This is what will be used to create agent policy.
+# For APM Server, i need a policy and then when i start kibana i.e when Kibana
+# connects to Elasticsearch, it will automatically create this policy for me.
+# Because without this policy, i wouldn't be able to actually, use the APM
+# server.
 xpack.fleet.packages:
   - name: apm
     version: latest
