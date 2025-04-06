@@ -1,0 +1,133 @@
+# https://www.elastic.co/guide/en/beats/heartbeat/current/monitor-http-options.html
+# Http status endpoint or Health status endpoint, they are not going through
+# the API gateway so they dont need to have any kind of Token or JWT token
+# attached to them. So I dont need to specify `headers` because my endpoint
+# doesnt require a specific type of header.
+# Im also going to specify the HTTP method and also the response i expect.
+# For me, im expect it to have 200. If it returns maybe 500 or 400 or something
+# like that, then its going to be an error.
+
+# @ Configure Heartbeat Monitors
+heartbeat.config.monitors:
+  # So this is just for it to look for the YAML file inside the monitors.d
+  path: ${path.config}/monitors.d/*.yml
+  # Reload configuration files as they change:
+  # So this reload enabled to false, what it means is, its not going to check
+  # for changes in the YAML file.
+  reload.enabled: false
+  # Reload checks every N seconds:
+  # Since reload is false, this is not going to be used.
+  reload.period: 5s
+
+# Define HTTP monitors
+heartbeat.monitors:
+  - type: http
+    # The first monitor i want to add is the monitor for my gateway service.
+    id: tradenexus-api-gateway
+    name: TradeNexus API Gateway Service
+    # schedule is how frequent
+    schedule: '@every 5s'
+    # And the hosts. Because for me at least, i dont have my services running
+    # using the docker containers. And they are not in the same network. So
+    # these services like api gateway, auth, users etc are not running in the
+    # same network as my heartbeats in the docker compose, even though i have
+    # defined in the docker compose. But im not executing it, instead im
+    # executing them separately from the terminal. So because of that, im using
+    # my IP. So im gonna use my IP since i dont have them, but if i have them
+    # running in the same docker network, then i can use the container name.
+    # hosts: ['http://gateway_container:4000/gateway-health']
+    # Public IP Address
+    # hosts: ['http://203.9.211.119:4000/gateway-health']
+    # Private IP Address
+    hosts: ['http://192.168.100.79:4000/gateway-health']
+    # Use host.docker.internal for all platforms, or private IP for Linux
+    # hosts: ['http://host.docker.internal:4000/gateway-health']
+    # what is the method
+    check.request.method: GET
+    # what response do i expect. if im expecting multiple response code, i can
+    # just add them in the square bracket.
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-notification
+    name: TradeNexus Notification Service
+    schedule: '@every 5s'
+    # Public IP Address
+    # hosts: ['http://203.9.211.119:4001/notification-health']
+    # Private IP Address
+    # hosts: ['http://192.168.100.79:4001/notification-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-auth
+    name: TradeNexus Auth Service
+    schedule: '@every 5s'
+    # hosts: ['http://203.9.211.119:4002/auth-health']
+    hosts: ['http://192.168.100.79:4002/auth-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-users
+    name: TradeNexus Users Service
+    schedule: '@every 5s'
+    # hosts: ['http://203.9.211.119:4003/user-health']
+    hosts: ['http://192.168.100.79:4003/user-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-gigs
+    name: TradeNexus Gigs Service
+    schedule: '@every 5s'
+    # hosts: ['http://203.9.211.119:4004/gig-health']
+    hosts: ['http://192.168.100.79:4004/gig-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-chat
+    name: TradeNexus Chat Service
+    schedule: '@every 5s'
+    # hosts: ['http://203.9.211.119:4005/chat-health']
+    hosts: ['http://192.168.100.79:4005/chat-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-orders
+    name: TradeNexus Orders Service
+    schedule: '@every 5s'
+    # hosts: ['http://203.9.211.119:4006/order-health']
+    hosts: ['http://192.168.100.79:4006/order-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+  - type: http
+    id: tradenexus-reviews
+    name: TradeNexus Reviews Service
+    schedule: '@every 5s'
+    # urls: ['http://203.9.211.119:4007/review-health']
+    # urls: ['http://192.168.100.79:4007/review-health']
+    hosts: ['http://192.168.100.79:4007/review-health']
+    check.request.method: GET
+    check.response.status: [200]
+
+processors:
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+
+monitoring.enabled: true
+
+# Set the output.
+# Set where do i want to send the data to which is Elasticsearch.
+# The data this heartbeat collects, it will save it on Elasticsearch and then
+# i view it using Kibana.
+output.elasticsearch:
+  hosts: ['http://elasticsearch_container:9200']
+  # Default username and default password.
+  # username: 'elastic'
+  username: 'colson'
+  # password: 'admin1234'
+  password: 'stillhome'

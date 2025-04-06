@@ -336,6 +336,30 @@ services:
     command: ['--strict.perms=false', '--system.hostfs=/hostfs']
     depends_on:
       - elasticsearch
+  heartbeat:
+    container_name: heartbeat_container
+    # image: docker.elastic.co/beats/metricbeat:8.11.0
+    # @ Latest Heartbeat image
+    image: docker.elastic.co/beats/heartbeat:8.17.4
+    user: root
+    # I dont need the port.
+    hostname: heartbeat
+    # extra_hosts:
+    #   # This is important for LINUX machine.
+    #   - 'host.docker.internal:host-gateway'
+    cap_add:
+      # This is some capabilities added to docker for this particular container.
+      - NET_RAW
+    # I use the same network.
+    networks:
+      - elastic
+    command: ['--strict.perms=false']
+    volumes:
+      # Replace what i have in the container i.e heartbeat.yml with my
+      # file heartbeat.yml.
+      - ./heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
+    depends_on:
+      - elasticsearch
 
   gateway:
     container_name: gateway_container
