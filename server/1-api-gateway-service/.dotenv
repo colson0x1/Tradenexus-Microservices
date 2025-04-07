@@ -16,6 +16,8 @@ MESSAGE_BASE_URL=http://localhost:4005
 ORDER_BASE_URL=http://localhost:4006
 REVIEW_BASE_URL=http://localhost:4007
 REDIS_HOST=redis://localhost:6379
-ELASTIC_SEARCH_URL=http://localhost:9200
+# ELASTIC_SEARCH_URL=http://localhost:9200
+# New Elasticsearch endpoint after managing user and service token in Kibana
+ELASTIC_SEARCH_URL=http://elastic:stillhome@localhost:9200
 ELASTIC_APM_SERVER_URL=http://localhost:8200
 ELASTIC_APM_SECRET_TOKEN=

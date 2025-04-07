@@ -1,0 +1,9 @@
+# Base configuration - all warnings enabled
+enable=all
+
+# Disable unused variable warnings only for environment files
+disable=SC2034 source=**/.env
+disable=SC2034 source=**/.env.development
+disable=SC2034 source=**/.env.production
+disable=SC2034 source=**/.env.local
+disable=SC2034 source=**/.env.test
