@@ -1,4 +1,9 @@
-ENABLE_APM=0
+# The reason why i added this property is, i dont want to get lot of log
+# information because if i start the APM Server and then my own server, i will
+# get a lot of log information in my console. So this is why i decided to set
+# this `ENABLE_APM=` property.
+# ENABLE_APM=0
+ENABLE_APM=1
 # For `pg` lib, im going to connect in a different way.
 # DATABASE_HOST=localhost
 # DATABASE_HOST=127.0.0.1
