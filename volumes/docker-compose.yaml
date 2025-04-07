@@ -424,6 +424,45 @@ services:
     # Kibana depends on Elasticsearch.
     depends_on:
       - elasticsearch
+
+  apmServer:
+    # image: docker.elastic.co/apm/apm-server:8.11.0
+    image: docker.elastic.co/apm/apm-server:8.17.4
+    container_name: apm_server_container
+    # Port for APM Server is 8200
+    ports:
+      - 8200:8200
+    volumes:
+      # Im mapping this file `apm-server.yml` to what i have inside the container
+      # i.e to this mount path `/usr/share/apm-server/apm-server.yml`
+      # So im going to mount my own `apm-server.yml` onto this path
+      # `/usr/share/apm-server/apm-server.yml` so it replaces the apm-server.yml
+      # inside the container.
+      - ./apm-server.yml:/usr/share/apm-server/apm-server.yml:ro
+    # I need the same networks
+    networks:
+      - elastic
+    # Im adding some commands.
+    # I want to monitor my frontend as well so i enabled `apm-server.run`,
+    # Here on `host=kibana_container`, im just passing the Kibana container.
+    # And then replicas, kibana host and permissions.
+    # Note: if i dont have a container name, then i can just use the service
+    # name.
+    # In the microservices, the `ELASTIC_APM_SECRET=` for my local setup is
+    # always empty. Im setting it empty because i want to use anonymous
+    # authentication. But once I go to the cloud (Elastic Cloud), i'll get an
+    # actual SECRET to use.
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E setup.kibana.host=kibana_container:5601
+        -E setup.template.settings.index.number_of_replicas=0
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana_container:5601
+        -E apm-server.kibana.protocol=http
+        -E strict.perms=false
+        -E apm-server.auth.anonymous.enabled=true
+
   metricbeat:
     container_name: metricbeat_container
     # Note: Version numbers should all be same for Elasticsearch, Kibanna,
@@ -460,6 +499,7 @@ services:
     command: ['--strict.perms=false', '--system.hostfs=/hostfs']
     depends_on:
       - elasticsearch
+
   heartbeat:
     container_name: heartbeat_container
     # image: docker.elastic.co/beats/metricbeat:8.11.0

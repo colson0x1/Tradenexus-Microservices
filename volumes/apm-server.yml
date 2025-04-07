@@ -1,0 +1,54 @@
+# @ APM Server
+# APM is the Application Performance Monitoring built on the Elasticstack.
+# So it allows me to monitor software services in real time. I can monitor
+# things like response time for incoming requests, database queries, calls to
+# caches, external HTTP request and more.
+# To work with APM, i need:
+# - Elasticsearch
+# - Kibana
+# - Integrations Server
+# Now because of this integrations server that comes with APM Server and
+# Fleet-managed Elastic Agent, that is why i had to update the Elasticsearch.
+# If I just use the APM server service, the way Elasticsearch was, it would not
+# work. So i had to update the Elasticsearch.
+# They (Elastic Stack Team) made changes to the version. So with version 8.11.0
+# and versions upwards, changes have been made. I need to setup the Integrations
+# Server that comes with APM Server and Fleet-managed Elastic Agent.
+
+apm-server:
+  # Host is going to be the APM container. Some engineers might use host like
+  # this: `host: "0.0.0.0"` but i will use the APM Server container name and the
+  # port.
+  # host: '0.0.0.0'
+  host: 'apm_server_container:8200'
+
+# Another property i want to set is the auth token.
+auth:
+  # Since i've set anonymous authentication to true in the APM container, so
+  # the secret token is empty here.
+  # But in future, when i go to the cloud with Elastic Cloud, then i'll have to
+  # update it with a new secret.
+  secret_token: ''
+
+# I need to set the output.
+# I want the data collected to go to the Elasticsearch.
+output.elasticsearch:
+  # This is Elasticsearch host.
+  hosts: ['http://elasticsearch_container:9200']
+  # Setting true to enable the output.
+  enabled: true
+  protocol: 'http'
+  username: 'elastic'
+  # Here im going to use the new password. The old default password is `changeme`.
+  # And the new password after the configuration change made to Elasticsearch
+  # and Kibana to work with APM Server, is `stillhome`.
+  password: 'stillhome'
+  ssl.enabled: false
+
+monitoring.enabled: true
+
+monitoring.elasticsearch:
+  protocol: 'http'
+  username: 'elastic'
+  password: 'stillhome'
+  hosts: ['http://elasticsearch_container:9200']
