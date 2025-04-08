@@ -1,0 +1,19 @@
+# @ Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: tradenexus-redis
+  # Every resources that im going to create will be on the production namespace.
+  namespace: production
+spec:
+  # Service type is ClusterIp.
+  # With ClusterIP, i can only access it from within the cluster, not outside.
+  type: ClusterIP
+  selector:
+    # So any pod with this selector, that pod will have this service attached
+    # to it.
+    app: tradenexus-redis
+  ports:
+    - name: tradenexus-redis
+      port: 6379
+      targetPort: 6379

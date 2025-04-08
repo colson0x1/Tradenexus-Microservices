@@ -1,0 +1,25 @@
+# Persistent Volume
+# For this setup, im going to use the production namespace. So my own resources,
+# every resources im going to create, im going to add them to a production
+# namespace so that i can isolate it from other resources.
+# This persistent volume is going to act like a Redis volume i have on
+# volumes > `/docker-volumes` created with docker compose. So its going to be
+# stored on the local machine.
+# So this is the storage for my Redis data.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv
+  # So namespace is going to be on the production namespace.
+  namespace: production
+spec:
+  # The name i called in `storageClass.yml`
+  storageClassName: redis-local-storage
+  capacity:
+    # Im giving it 1GB storage.
+    storage: 1Gi
+  # accessModes contains all ways the volume can be mounted.
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: '/storage/data1'

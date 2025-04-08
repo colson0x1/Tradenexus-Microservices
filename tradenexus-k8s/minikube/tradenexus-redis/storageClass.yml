@@ -1,0 +1,19 @@
+# @ Storage Class
+# The storage class i want to create is the local storage class.
+# Local storage in the sense that the persistent volume or the data for that
+# will be added to redis, I want to save them locally.
+# If i get to the point of moving it to the cloud, there are storage class that
+# different cloud providers makes available. Like AWS, Google Cloud, Azure has
+# a storage class that i can use.
+# But here i want to set it up locally. I want to store the data locally.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: redis-local-storage
+# No provisioner because i dont want to provision it for any cloud provider.
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+# Delete here means once i release it from the persistent volume claim, the
+# storage class should be deleted.
+reclaimPolicy: Delete
