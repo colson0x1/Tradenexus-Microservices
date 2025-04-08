@@ -5,7 +5,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: tradenexus-redis
+  name: tn-redis
   # Every resources that im going to create will be on the production namespace.
   namespace: production
 spec:
@@ -15,8 +15,8 @@ spec:
   selector:
     # So any pod with this selector, that pod will have this service attached
     # to it.
-    app: tradenexus-redis
+    app: tn-redis
   ports:
-    - name: tradenexus-redis
+    - name: tn-redis
       port: 6379
       targetPort: 6379
