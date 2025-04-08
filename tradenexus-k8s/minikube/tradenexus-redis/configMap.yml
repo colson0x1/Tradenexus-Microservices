@@ -1,3 +1,9 @@
+# In termainal:
+# First of all, Create production namespace:
+# $ kubectl create namespace production
+# Cd to minikube/tradenexus-redis dir and apply configMap:
+# $ kubectl apply -f configMap.yml
+
 # @ ConfigMap
 # ConfigMap is used to store non-sensitive data.
 # Here i can add my secrets because im just using this only locally.

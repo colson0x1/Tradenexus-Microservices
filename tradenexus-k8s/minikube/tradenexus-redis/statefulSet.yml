@@ -1,0 +1,139 @@
+# Cd to minikube/tradenexus-redis dir and apply Storage Class:
+# $ kubectl apply -f statefulSet.yml
+
+# @ StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tradenexus-redis
+  namespace: production
+spec:
+  # The StatefulSet usually requires a service if i want to attach a service
+  # to it. And my service name is in `service.yml`.
+  serviceName: tradenexus-redis
+  # The way this StatefulSet is set up, it will have master and a followers.
+  # So if i setup 3 replicas here then im going to have 1 master and 2 followers.
+  # And if for some reason the master pod was killed or has an issue, then it
+  # will automatically be switched i.e one of the followers will automatically
+  # become the master when the master goes down.
+  # My machine is powerful but for most machines might not have lot of space and
+  # minikube is just one single node. There will be other objects so i'll have
+  # lot of resources and third party resources as well and minikube might run
+  # out of memory and those machines might have issues scheduling some other
+  # pods on the node. Minikube is just one single node cluster. If it were a
+  # multiple nodes then probably it wouldn't be a problem. So i dont want
+  # other machines to run out of memory and for safe zone, im setting to 1 replicas.
+  replicas: 1
+  selector:
+    matchLabels:
+      # I can specify whatever key i like here. So im specifying the key to `app`.
+      app: tradenexus-redis
+  # For template, every pod that will be created by this StatefulSet, im going
+  # to attach a level with a key called `app` and the value called `tradenexus-redis`.
+  # In service.yml, the selector name is `tradenexus-redis` too. So that every
+  # pod with this selector name will be attached a Service to that pod.
+  # So every pod that will be created will have this app lebels.
+  template:
+    metadata:
+      labels:
+        app: tradenexus-redis
+    spec:
+      # This initContainers will be executed immediately the first time the
+      # container starts. So this is the first thing that will be executed.
+      initContainers:
+        - name: config
+          image: redis:alpine
+          command: ['sh', '-c']
+          # So the idea here is, this is where i set the master and followers.
+          # If there are 4 replicas. The naming convention that will be used by
+          # StatefulSet will  be `tradenexus-redis-0`, `tradenexus-redis-1`,
+          # `tradenexus-redis-2` and `tradenexus-redis-3`.
+          # So what this code righ below does is, it checks and assigns one of
+          # the first pod automatically as the master. And then the three other
+          # pods will be the followers. And then if something happens with the
+          # master, the StatefulSet will recreate the pod with the same name.
+          # If its Deployment object, it will recreate the pod with a different
+          # name. But StatefulSet will create with the same name. So that is
+          # what here im specifying.
+          args:
+            - |
+              cp /tmp/redis/redis.conf /etc/redis/redis.conf
+
+              echo "finding master..."
+              MASTER_FQDN=`hostname  -f | sed -e 's/tradenexus-redis-[0-9]\./tradenexus-redis-0./'`
+              if [ "$(redis-cli -h sentinel -p 5000 ping)" != "PONG" ]; then
+                echo "master not found, defaulting to tradenexus-redis-0"
+
+                if [ "$(hostname)" == "tradenexus-redis-0" ]; then
+                  echo "this is tradenexus-redis-0, not updating config..."
+                else
+                  echo "updating redis.conf..."
+                  echo "slaveof $MASTER_FQDN 6379" >> /etc/redis/redis.conf
+                fi
+              else
+                echo "sentinel found, finding master"
+                MASTER="$(redis-cli -h sentinel -p 5000 sentinel get-master-addr-by-name mymaster | grep -E '(^tradenexus-redis-\d{1,})|([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})')"
+                echo "master found : $MASTER, updating redis.conf"
+                echo "slaveof $MASTER 6379" >> /etc/redis/redis.conf
+              fi
+          # So i want to mount my config.
+          # Configs can be mounted on a pods so i created a config using ConfigMaps
+          # and this is where im mounting the config.
+          volumeMounts:
+            - name: redis-config
+              mountPath: /etc/redis/
+            - name: config
+              mountPath: /tmp/redis/
+      # This will define my container.
+      containers:
+        - name: tradenexus-redis
+          image: redis:alpine
+          command: ['redis-server']
+          # I have defined redis.conf there on configMap. So that configuration
+          # file will be used by the pods.
+          args: ['/etc/redis/redis.conf']
+          ports:
+            # If i want to access this port maybe somewhere else in this
+            # configuration, instead of calling the port number, i can just
+            # use the name. So that is the reason i used this name property.
+            # So if i want to access this port somewhere down where i have
+            # port, i can just use this `tradenexus-redis` i.e i can use the port's
+            # name instead of directly using the port number.
+            - containerPort: 6379
+              name: tradenexus-redis
+          readinessProbe:
+            # Checks every 10 seconds
+            periodSeconds: 10
+            tcpSocket:
+              port: tradenexus-redis
+          livenessProbe:
+            periodSeconds: 10
+            tcpSocket:
+              port: tradenexus-redis
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: redis-config
+              mountPath: /etc/redis/
+      volumes:
+        - name: redis-config
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: redis-config
+  # This is where i use my persistent volume.
+  # In order to use a persistent volume, i need to create a persistent volume
+  # claim and this is where i define the persistent volume claim. In some cases,
+  # engineers will create configurations are created in a separate file for
+  # the persistent volume claim. But im just adding it here.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ['ReadWriteOnce']
+        # storageClassName is the same name in `pv.yml`.
+        storageClassName: 'redis-local-storage'
+        # Here im setting resources requests to 500 MB.
+        resources:
+          requests:
+            storage: 500Mi

@@ -1,3 +1,6 @@
+# Cd to minikube/tradenexus-redis dir and apply Service:
+# $ kubectl apply -f service.yml
+
 # @ Service
 apiVersion: v1
 kind: Service

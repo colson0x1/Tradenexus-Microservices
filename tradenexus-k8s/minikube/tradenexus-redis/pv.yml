@@ -1,4 +1,7 @@
-# Persistent Volume
+# Cd to minikube/tradenexus-redis dir and apply Persistent Volume:
+# $ kubectl apply -f pv.yml
+
+# @ Persistent Volume
 # For this setup, im going to use the production namespace. So my own resources,
 # every resources im going to create, im going to add them to a production
 # namespace so that i can isolate it from other resources.

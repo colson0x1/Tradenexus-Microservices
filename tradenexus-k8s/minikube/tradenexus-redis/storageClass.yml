@@ -1,3 +1,6 @@
+# Cd to minikube/tradenexus-redis dir and apply Storage Class:
+# $ kubectl apply -f storageClass.yml
+
 # @ Storage Class
 # The storage class i want to create is the local storage class.
 # Local storage in the sense that the persistent volume or the data for that
