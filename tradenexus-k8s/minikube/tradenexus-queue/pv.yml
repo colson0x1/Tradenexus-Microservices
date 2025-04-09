@@ -1,0 +1,49 @@
+# In termainal:
+# $ kubectl apply -f pv.yml
+
+# @ Persistent Volume
+# Persistent volume is just a storage like a database where data is stored.
+# In this file, i will create both Persistent Volume and Persistent Volume Claim.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rabbitmq-pv
+  # For Persistent Volume, i don't need a namespace because its a Cluster wide
+  # resource. So whatever Persistent Volume I create will be applied to the
+  # whole cluster.
+  # namespace: production
+spec:
+  # storageClassName is going to be the metadata name i added in `storageClass.yml`
+  # so this is going to be the storage class name used in my persistent volume.
+  storageClassName: rabbitmq-local-storage
+  capacity:
+    # Im giving it 1GB storage.
+    storage: 1Gi
+  # accessModes contains all ways the volume can be mounted.
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: '/storage/data1'
+# @ Persistent Volume Claims
+# I need a Persistent Volume Claim so that i can use it on my deployment
+# file.
+# Im defining the persistent volume claim in this file.
+# `---` is used to separate different objects.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-pvc
+  # For Persitent Volume Claim, its namespace is scoped. So it can be applied to
+  # a specifice namespace.
+  namespace: production
+spec:
+  # storageClassName is going to be the metadata name i added in `storageClass.yml`
+  # so this is going to be the storage class name used in my persistent volume.
+  storageClassName: rabbitmq-local-storage
+  resources:
+    requests:
+      storage: 1Gi
+  accessModes:
+    - ReadWriteOnce

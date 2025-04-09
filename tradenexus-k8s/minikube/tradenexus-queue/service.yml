@@ -1,3 +1,6 @@
+# In termainal:
+# $ kubectl apply -f service.yml
+
 # @ RabbitMQ Service
 apiVersion: v1
 kind: Service

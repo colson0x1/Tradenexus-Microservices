@@ -1,4 +1,8 @@
+# In termainal:
+# $ kubectl apply -f queue.yml
+
 # @ RabbitMQ Deployment
+# queue.yml or deployment.yml
 # Because with RabbitMQ, im not gonna be storing any data, so there is no need
 # creating it with a StatefulSet. Therefore im going to use Deployment here.
 # For Deployment, it will creates the name and then attach some alphanumeric
@@ -8,6 +12,15 @@
 # Deployment, they will be managed by Deployment.
 # While for StatefulSet, it uses the integers 0 & 1 like that depending on
 # the number of replicas i have i.e `tn-redis-0`.
+# NOTE: There's documentation  online on setting up RabbitMQ, but they are mostly
+# examples about creating StatefulSet. For me since im just createing 1 replica,
+# and its for testing but not production deployment right now. So i dont need
+# to create StatefulSet.
+# I can use StatefulSet but i decided to use Deployment because im not going to
+# create multiple replicas, i want only one replica because this is just for testing.
+# If i take it to production and i want to manage the deployment myself without
+# using third party service, then i would likely want to create a StatefulSet
+# or if i want multiple replicas, then i could create StatefulSet too.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -32,7 +45,9 @@ spec:
       containers:
         - name: tn-queue
           # image: rabbitmq:3.12.8-management-alpine
-          image: rabbitmq:4.1-rc-management-alpine
+          # image: rabbitmq:4.1-rc-management-alpine
+          # Stable versionn with Management UI on Alpine Linux
+          image: rabbitmq:4.0.8-management-alpine
           env:
             - name: RABBITMQ_DEFAULT_USER
               value: colson
@@ -49,15 +64,14 @@ spec:
             # out. It might be because it is being starved of resources.
             # So that is why i need to specify resources for each pod i create.
             limits:
-              # memory: 1Gi
-              memory: '128Mi'
+              memory: 1Gi
               # cpu: 1
-              cpu: '500m'
+              cpu: '0.5' # 0.5 === 500m
             requests:
               # memory: 1Gi
-              memory: '128Mi'
+              memory: 150Mi
               # cpu: 1
-              cpu: '100m'
+              cpu: 100m
           ports:
             # AMQP protocol port
             - name: queue
@@ -69,3 +83,15 @@ spec:
               # Port to access the management dashboard
               containerPort: 15672
               protocol: TCP
+          # Now i need to make use of Persistent Volume and Persistent Volume
+          # Claim
+          volumeMounts:
+            - name: rabbitmq-local-storage
+              # Mount path of my storage.
+              mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: rabbitmq-local-storage
+          persistentVolumeClaim:
+            # Claim name is the name of the persistent volume claim i created
+            # in `pv.yml` at the bottom i.e its metadata > name
+            claimName: rabbitmq-pvc
