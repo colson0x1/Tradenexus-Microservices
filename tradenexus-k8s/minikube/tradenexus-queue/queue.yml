@@ -1,0 +1,71 @@
+# @ RabbitMQ Deployment
+# Because with RabbitMQ, im not gonna be storing any data, so there is no need
+# creating it with a StatefulSet. Therefore im going to use Deployment here.
+# For Deployment, it will creates the name and then attach some alphanumeric
+# characters to the name like `tn-queue-8asd8s0sz-Sq908`. So on Pods created by
+# Deployment, it shows those characters.
+# Deployment are managed by Replica Sets and Pods if i create Pods with
+# Deployment, they will be managed by Deployment.
+# While for StatefulSet, it uses the integers 0 & 1 like that depending on
+# the number of replicas i have i.e `tn-redis-0`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tn-queue
+  namespace: production
+spec:
+  # 1 pod will be created
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tn-queue
+    # Every pod that will be created, i want to have:
+  template:
+    metadata:
+      # This labels right here, is what the Service will use to attach
+      # itself to the pod.
+      # Key is called `app` here. I can use any key like `mykey`.
+      labels:
+        app: tn-queue
+    spec:
+      # Container section
+      containers:
+        - name: tn-queue
+          # image: rabbitmq:3.12.8-management-alpine
+          image: rabbitmq:4.1-rc-management-alpine
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: colson
+            - name: RABBITMQ_DEFAULT_PASS
+              value: stillhome
+          resources:
+            # The reason why i need both limits and requests is, once this pod
+            # is scheduled, the pod doesn't starve. So if i dont specify
+            # resources here, it will still work. But i might run into issues
+            # whereby this particular pod might end up needing a lot of
+            # resources and then it will start all the other pods of resources.
+            # I might just run into a case whereby i have a different pod just
+            # failing. Its just failing for some reason that i can't figure
+            # out. It might be because it is being starved of resources.
+            # So that is why i need to specify resources for each pod i create.
+            limits:
+              # memory: 1Gi
+              memory: '128Mi'
+              # cpu: 1
+              cpu: '500m'
+            requests:
+              # memory: 1Gi
+              memory: '128Mi'
+              # cpu: 1
+              cpu: '100m'
+          ports:
+            # AMQP protocol port
+            - name: queue
+              # Port to access the cluster
+              containerPort: 5672
+              protocol: TCP
+            # Management UI port
+            - name: mgmt
+              # Port to access the management dashboard
+              containerPort: 15672
+              protocol: TCP

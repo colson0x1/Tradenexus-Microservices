@@ -1,0 +1,25 @@
+# @ RabbitMQ Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: tn-queue
+  namespace: production
+spec:
+  type: ClusterIP
+  selector:
+    # Every queue with this label, that is where this Service will be attached
+    # to.
+    app: tn-queue
+  ports:
+    - name: queue
+      # This is port in the container
+      port: 5672
+      # Target port is going to be the port that im going to use outside.
+      # targetPort: 5672
+      targetPort: queue
+      protocol: TCP
+    - name: mgmt
+      port: 15672
+      # targetPort: 15672
+      targetPort: mgmt
+      protocol: TCP
