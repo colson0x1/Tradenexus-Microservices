@@ -135,7 +135,9 @@ services:
   rabbitmq:
     container_name: rabbitmq_container
     # image: rabbitmq:3.13-rc-management-alpine
-    image: rabbitmq:4.1-rc-management-alpine
+    # image: rabbitmq:4.1-rc-management-alpine
+    # Stable versionn with Management UI on Alpine Linux
+    image: rabbitmq:4.0.8-management-alpine
     restart: always
     environment:
       - RABBITMQ_DEFAULT_USER=colson
